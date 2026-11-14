@@ -13,6 +13,8 @@ window/size/viewport_height=720
 window/stretch/mode="canvas_items"
 
 [rendering]
+# Import ETC2/ASTC variants so Android exports have mobile-compatible texture resources.
+textures/vram_compression/import_etc2_astc=true
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.42, 0.62, 0.78, 1)
