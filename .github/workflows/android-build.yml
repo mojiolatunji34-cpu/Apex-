@@ -40,14 +40,9 @@ jobs:
           cp -a export-templates/templates/. "$HOME/.local/share/godot/export_templates/4.3.stable/"
 
       - name: Import project
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
         run: godot-bin/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit
 
       - name: Export debug APK
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_HOME }}
         run: |
           mkdir -p build
           godot-bin/Godot_v4.3-stable_linux.x86_64 --headless --path . --export-debug "Android" build/ApexRacing-debug.apk
