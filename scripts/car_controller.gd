@@ -446,6 +446,18 @@ func _build_vehicle_visuals() -> void:
 		add_child(headlamp)
 		body_animation_nodes.append(headlamp)
 
+		# Low-cost forward lamps improve visibility and make the car read clearly at night.
+		var beam := SpotLight3D.new()
+		beam.name = "HeadlightBeam"
+		beam.position = Vector3(x, 0.42, -1.92)
+		beam.rotation.x = deg_to_rad(-4.0)
+		beam.light_color = Color(0.78, 0.87, 1.0)
+		beam.light_energy = 1.15
+		beam.spot_range = 24.0
+		beam.spot_angle = 32.0
+		beam.shadow_enabled = false
+		add_child(beam)
+
 	brake_light_material = StandardMaterial3D.new()
 	brake_light_material.albedo_color = Color(0.8, 0.015, 0.01)
 	brake_light_material.emission_enabled = true
