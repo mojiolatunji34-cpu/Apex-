@@ -219,6 +219,7 @@ func get_engine_health_factor() -> float:
 func get_damage_text() -> String:
 	return "DAMAGE %02d%%" % roundi(damage_amount)
 
+func _update_powertrain(delta: float, speed_kmh: float, forward_speed: float) -> void:
 	shift_cooldown = maxf(0.0, shift_cooldown - delta)
 	if forward_speed < -1.0:
 		current_gear = 1
