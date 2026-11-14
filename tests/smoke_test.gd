@@ -88,5 +88,9 @@ func _run_smoke_test() -> void:
 		quit(1)
 		return
 
+	# Release the generated 3D scene before exiting so the headless renderer can clean up its mesh resources.
+	game.queue_free()
+	await process_frame
+	await process_frame
 	print("APEX RACING SMOKE TEST PASSED")
 	quit(0)
