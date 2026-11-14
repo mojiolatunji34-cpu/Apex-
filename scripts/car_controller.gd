@@ -157,7 +157,11 @@ func _physics_process(delta: float) -> void:
 		var wheel := wheel_visuals[i]
 		if not ray.is_colliding():
 			previous_compression[i] = 0.0
-			wheel.visible = false
+			# Keep the wheel visible at full droop while it is off the ground.
+			var droop_target: Vector3 = ray.position + ray.target_position + Vector3.UP * wheel_radius
+			wheel_steering_pivots[i].position = wheel_steering_pivots[i].position.lerp(droop_target, clampf(delta * 16.0, 0.0, 1.0))
+			wheel.visible = true
+			wheel.rotate_object_local(Vector3.RIGHT, forward_speed * delta / maxf(wheel_radius, 0.01))
 			continue
 
 		grounded_wheels += 1
@@ -195,7 +199,8 @@ func _physics_process(delta: float) -> void:
 		longitudinal_force = clampf(longitudinal_force, -max_tyre_force, max_tyre_force)
 		apply_force(wheel_forward * longitudinal_force, hit_point - global_position)
 
-		wheel_steering_pivots[i].position = to_local(hit_point + hit_normal * wheel_radius)
+		var wheel_target: Vector3 = to_local(hit_point + hit_normal * wheel_radius)
+		wheel_steering_pivots[i].position = wheel_steering_pivots[i].position.lerp(wheel_target, clampf(delta * 22.0, 0.0, 1.0))
 		wheel_steering_pivots[i].rotation.y = steer_angle
 		wheel.visible = true
 		wheel.rotate_object_local(Vector3.RIGHT, long_speed * delta / maxf(wheel_radius, 0.01))
@@ -409,7 +414,7 @@ func _build_vehicle_visuals() -> void:
 			wheel_is_front.append(z < 0.0)
 
 			var wheel_pivot := Node3D.new()
-			wheel_pivot.name = "FrontWheelPivot" if z < 0.0 else "RearWheelPivot"
+			wheel_pivot.name = ("FrontWheelPivot_" if z < 0.0 else "RearWheelPivot_") + str(wheel_steering_pivots.size() + 1)
 			wheel_pivot.position = Vector3(x, -0.1, z)
 			add_child(wheel_pivot)
 			wheel_steering_pivots.append(wheel_pivot)
