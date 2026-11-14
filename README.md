@@ -1,16 +1,16 @@
 # Apex Racing
 
-An Android-first 3D racing simulator project built with Godot 4 and the GL Compatibility renderer.
+Android-first 3D racing simulator prototype built with Godot 4 and the GL Compatibility renderer.
 
-## Current prototype systems
+## Implemented prototype systems
 
-- Procedurally built test circuit with collision barriers and start/finish marking.
-- Player vehicle with rigid-body movement, forward/reverse drive, braking, steering and handbrake.
-- Approximate lateral tyre-grip forces and speed-dependent downforce.
-- Rotating wheel visuals (visual animation only; not individual simulated wheel assemblies).
-- Smooth chase camera.
-- Touchscreen steering, accelerator, brake, reverse and handbrake controls.
-- Keyboard controls for desktop testing.
+- Procedurally generated rectangular test circuit, barriers and start/finish marking.
+- Player vehicle with rigid-body chassis, four suspension raycasts and spring/damper forces.
+- Per-wheel tyre lateral grip and rear-wheel drive forces, with braking and handbrake grip changes.
+- Animated wheel meshes positioned from suspension ray hits.
+- Smooth chase camera and touchscreen steering/pedals.
+- Three-lap race session with ordered checkpoints, race timer and best-lap display.
+- Vehicle reset button and keyboard controls for desktop testing.
 
 ## Open the project
 
@@ -28,16 +28,8 @@ An Android-first 3D racing simulator project built with Godot 4 and the GL Compa
 | Reverse | REVERSE | S / Down |
 | Steer | Left / Right | A,D / arrows |
 | Handbrake | HANDBRAKE | Shift |
+| Recover | RESET CAR | — |
 
-## Important development status
+## Development status
 
-This is an early playable prototype, not a finished simulator. The current vehicle uses a single rigid body and approximate grip forces. The wheel meshes rotate for appearance but do not yet have independent suspension, tyre contact patches, tyre temperatures or per-wheel physics. There are no AI opponents, race timing, damage, audio, garage, career or finished production car/track assets yet.
-
-## Planned milestones
-
-1. Validate project import and runtime on a real Android device.
-2. Implement and tune four-wheel raycast suspension and tyre forces.
-3. Add race session flow, checkpoints, lap timing and reset/recovery.
-4. Add AI opponents and opponent behaviour.
-5. Add audio, vehicle setup, garage and track presentation.
-6. Profile and optimise for target Android devices.
+The four wheel assemblies now have raycast-based suspension and approximate tyre forces, but this is still an early physics model that needs tuning in a running game. It is not a validated professional vehicle simulator. Race timing and checkpoint logic are prototype systems. AI opponents, multiple finished tracks and cars, audio, damage, garage, upgrades and production assets remain future work.

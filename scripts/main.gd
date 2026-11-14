@@ -3,6 +3,7 @@ extends Node3D
 const CarScript = preload("res://scripts/car_controller.gd")
 const CameraScript = preload("res://scripts/chase_camera.gd")
 const HudScript = preload("res://scripts/mobile_hud.gd")
+const RaceScript = preload("res://scripts/race_manager.gd")
 
 func _ready() -> void:
 	_setup_input()
@@ -117,6 +118,12 @@ func _spawn_player_car() -> void:
 	car.name = "PlayerCar"
 	car.position = Vector3(26.5, 0.85, 21.0)
 	add_child(car)
+	car.set_spawn_transform(car.global_transform)
+
+	var race := RaceScript.new()
+	race.name = "RaceManager"
+	add_child(race)
+	race.set_player(car)
 
 	var camera := CameraScript.new()
 	camera.name = "ChaseCamera"
@@ -128,6 +135,7 @@ func _spawn_player_car() -> void:
 	var hud := HudScript.new()
 	hud.name = "MobileHUD"
 	hud.car_ref = car
+	hud.race_ref = race
 	add_child(hud)
 
 func _add_lighting() -> void:

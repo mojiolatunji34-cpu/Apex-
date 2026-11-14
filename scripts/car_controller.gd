@@ -7,11 +7,14 @@ class_name ApexCar
 @export var brake_force: float = 14500.0
 @export var max_speed_kmh: float = 210.0
 
-@export_group("Handling")
-@export var steering_torque: float = 5200.0
-@export var lateral_grip: float = 10.5
-@export var high_speed_grip: float = 0.72
-@export var handbrake_grip: float = 0.22
+@export_group("Suspension and tyres")
+@export var wheel_radius: float = 0.34
+@export var suspension_rest_length: float = 0.55
+@export var suspension_spring: float = 28000.0
+@export var suspension_damper: float = 3600.0
+@export var tyre_grip: float = 1.15
+@export var handbrake_grip: float = 0.32
+@export var max_steer_degrees: float = 30.0
 @export var downforce: float = 38.0
 
 var throttle_input: float = 0.0
@@ -19,15 +22,17 @@ var steer_input: float = 0.0
 var brake_input: float = 0.0
 var handbrake_input: float = 0.0
 var wheel_visuals: Array[MeshInstance3D] = []
+var suspension_rays: Array[RayCast3D] = []
+var previous_compression: Array[float] = [0.0, 0.0, 0.0, 0.0]
+var spawn_transform: Transform3D
 
 func _ready() -> void:
 	mass = 1150.0
-	linear_damp = 0.12
-	angular_damp = 3.2
-	axis_lock_angular_x = true
-	axis_lock_angular_z = true
+	linear_damp = 0.08
+	angular_damp = 1.8
 	continuous_cd = true
 	can_sleep = false
+	spawn_transform = global_transform
 	_build_vehicle_visuals()
 
 func _physics_process(delta: float) -> void:
@@ -36,40 +41,84 @@ func _physics_process(delta: float) -> void:
 	brake_input = Input.get_action_strength("brake")
 	handbrake_input = Input.get_action_strength("handbrake")
 
-	var forward := -global_transform.basis.z
-	var right := global_transform.basis.x
-	var forward_speed := linear_velocity.dot(forward)
+	var forward_speed := linear_velocity.dot(-global_transform.basis.z)
 	var speed_kmh := linear_velocity.length() * 3.6
+	var drive := throttle_input
+	if drive > 0.0 and forward_speed * 3.6 >= max_speed_kmh:
+		drive = 0.0
+	if drive < 0.0 and forward_speed > 1.0:
+		drive = 0.0
+	if brake_input > 0.0:
+		drive = 0.0
 
-	if throttle_input > 0.0 and forward_speed * 3.6 < max_speed_kmh:
-		apply_central_force(forward * throttle_input * engine_force)
-	elif throttle_input < 0.0:
-		if forward_speed > 1.0:
-			apply_central_force(-forward * brake_force * absf(throttle_input))
-		elif forward_speed * 3.6 > -35.0:
-			apply_central_force(forward * throttle_input * reverse_force)
+	var grounded_wheels := 0
+	for i in range(suspension_rays.size()):
+		var ray := suspension_rays[i]
+		ray.force_raycast_update()
+		var wheel := wheel_visuals[i]
+		if not ray.is_colliding():
+			wheel.visible = true
+			continue
 
-	if brake_input > 0.0 and absf(forward_speed) > 0.15:
-		apply_central_force(-forward * signf(forward_speed) * brake_force * brake_input)
+		grounded_wheels += 1
+		var hit_point: Vector3 = ray.get_collision_point()
+		var hit_normal: Vector3 = ray.get_collision_normal().normalized()
+		var ray_origin: Vector3 = ray.global_position
+		var travel_distance := ray_origin.distance_to(hit_point)
+		var compression := suspension_rest_length - (travel_distance - wheel_radius)
+		var compression_velocity := (compression - previous_compression[i]) / maxf(delta, 0.0001)
+		previous_compression[i] = compression
 
-	var sideways_speed := linear_velocity.dot(right)
-	var speed_grip := lerpf(1.0, high_speed_grip, clampf(speed_kmh / 220.0, 0.0, 1.0))
-	var grip := lateral_grip * speed_grip
-	if handbrake_input > 0.0:
-		grip = lerpf(grip, lateral_grip * handbrake_grip, handbrake_input)
-	apply_central_force(-right * sideways_speed * grip * mass)
+		var local_contact := to_local(hit_point)
+		var point_velocity := get_velocity_at_local_position(local_contact)
+		var suspension_force := maxf(0.0, compression * suspension_spring + compression_velocity * suspension_damper)
+		apply_force(hit_normal * suspension_force, global_position.direction_to(hit_point) * 0.0 + (hit_point - global_position))
 
-	var steering_factor := clampf(absf(forward_speed) / 4.0, 0.0, 1.0)
-	var direction_factor := -1.0 if forward_speed < -0.5 else 1.0
-	apply_torque(Vector3.UP * steer_input * steering_torque * steering_factor * direction_factor)
+		var is_front := i < 2
+		var steer_angle := deg_to_rad(max_steer_degrees) * steer_input if is_front else 0.0
+		var wheel_forward := (-global_transform.basis.z).rotated(hit_normal, steer_angle).normalized()
+		var wheel_right := wheel_forward.cross(hit_normal).normalized()
+		var side_speed := point_velocity.dot(wheel_right)
+		var long_speed := point_velocity.dot(wheel_forward)
+		var grip_scale := handbrake_grip if handbrake_input > 0.0 and not is_front else 1.0
+		var max_tyre_force := suspension_force * tyre_grip
+		var lateral_force := clampf(-side_speed * mass * 2.8 * grip_scale, -max_tyre_force, max_tyre_force)
+		apply_force(wheel_right * lateral_force, hit_point - global_position)
+
+		var longitudinal_force := 0.0
+		if not is_front:
+			longitudinal_force += drive * (engine_force if drive >= 0.0 else reverse_force) * 0.5
+		if brake_input > 0.0:
+			longitudinal_force += -signf(long_speed) * brake_force * brake_input * 0.25
+		longitudinal_force = clampf(longitudinal_force, -max_tyre_force, max_tyre_force)
+		apply_force(wheel_forward * longitudinal_force, hit_point - global_position)
+
+		wheel.position = to_local(hit_point + hit_normal * wheel_radius)
+		wheel.visible = true
+		wheel.rotate_object_local(Vector3.RIGHT, long_speed * delta / maxf(wheel_radius, 0.01))
 
 	if speed_kmh > 8.0:
 		apply_central_force(-global_transform.basis.y * speed_kmh * downforce)
 
-	_animate_wheels(delta)
+	# Prevent a car from accumulating huge sideways speed when briefly airborne.
+	if grounded_wheels == 0:
+		linear_damp = 0.18
+	else:
+		linear_damp = 0.08
 
 func get_speed_kmh() -> float:
 	return linear_velocity.length() * 3.6
+
+func reset_vehicle() -> void:
+	global_transform = spawn_transform
+	linear_velocity = Vector3.ZERO
+	angular_velocity = Vector3.ZERO
+	sleeping = false
+	for i in range(previous_compression.size()):
+		previous_compression[i] = 0.0
+
+func set_spawn_transform(value: Transform3D) -> void:
+	spawn_transform = value
 
 func _build_vehicle_visuals() -> void:
 	var body_shape := CollisionShape3D.new()
@@ -108,14 +157,23 @@ func _build_vehicle_visuals() -> void:
 	wheel_material.roughness = 0.88
 	for x in [-0.98, 0.98]:
 		for z in [-1.22, 1.22]:
+			var ray := RayCast3D.new()
+			ray.position = Vector3(x, 0.35, z)
+			ray.target_position = Vector3(0, -(suspension_rest_length + wheel_radius + 0.45), 0)
+			ray.enabled = true
+			ray.collide_with_areas = false
+			ray.collide_with_bodies = true
+			add_child(ray)
+			suspension_rays.append(ray)
+
 			var wheel := MeshInstance3D.new()
 			var wheel_mesh := CylinderMesh.new()
-			wheel_mesh.top_radius = 0.34
-			wheel_mesh.bottom_radius = 0.34
+			wheel_mesh.top_radius = wheel_radius
+			wheel_mesh.bottom_radius = wheel_radius
 			wheel_mesh.height = 0.24
 			wheel.mesh = wheel_mesh
 			wheel.rotation.z = PI / 2.0
-			wheel.position = Vector3(x, 0.43, z)
+			wheel.position = Vector3(x, -0.1, z)
 			wheel.material_override = wheel_material
 			add_child(wheel)
 			wheel_visuals.append(wheel)
@@ -127,8 +185,3 @@ func _build_vehicle_visuals() -> void:
 	spoiler.position = Vector3(0, 0.88, 1.65)
 	spoiler.material_override = paint
 	add_child(spoiler)
-
-func _animate_wheels(delta: float) -> void:
-	var spin := linear_velocity.length() * delta / 0.34
-	for wheel in wheel_visuals:
-		wheel.rotate_object_local(Vector3.RIGHT, spin)
