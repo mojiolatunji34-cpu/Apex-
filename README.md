@@ -1,36 +1,43 @@
 # Apex Racing
 
-Android-first 3D racing simulation prototype built with Godot 4.
+An Android-first 3D racing simulator project built with Godot 4 and the GL Compatibility renderer.
 
-## Current prototype
+## Current prototype systems
 
-- Procedurally created red player car with collision and rigid-body physics.
-- Acceleration, reverse, braking, steering torque and lateral tyre-grip approximation.
-- Chase camera.
-- Simple closed rectangular practice circuit with collision barriers.
-- On-screen touch controls and speed readout.
-- Keyboard controls for editor testing.
+- Procedurally built test circuit with collision barriers and start/finish marking.
+- Player vehicle with rigid-body movement, forward/reverse drive, braking, steering and handbrake.
+- Approximate lateral tyre-grip forces and speed-dependent downforce.
+- Rotating wheel visuals (visual animation only; not individual simulated wheel assemblies).
+- Smooth chase camera.
+- Touchscreen steering, accelerator, brake and handbrake controls.
+- Keyboard controls for desktop testing.
 
-## Open on Android
+## Open the project
 
-1. Install the official Godot Android editor: https://godotengine.org/download/android/
-2. Download this repository as a ZIP from GitHub, then extract it on your phone.
-3. In Godot, choose **Import** and select the extracted `project.godot`.
-4. Open the project and press **Run Project**.
+1. Install Godot 4.3 or a compatible Godot 4.x Android editor.
+2. Download this repository as a ZIP and extract it.
+3. In Godot, choose **Import**, then select the extracted `project.godot`.
+4. Open the project and run the main scene.
 
 ## Controls
 
-Touch:
-- ◀ / ▶: steer
-- ACCEL: accelerate
-- BRAKE: brake
+| Action | Touchscreen | Keyboard |
+|---|---|---|
+| Accelerate | ACCEL | W / Up |
+| Brake | BRAKE | Space |
+| Steer | Left / Right | A,D / arrows |
+| Handbrake | HANDBRAKE | Shift |
+| Reverse | Hold brake/reverse input | S / Down |
 
-Keyboard:
-- W / Up: accelerate
-- S / Down: reverse
-- A / Left and D / Right: steer
-- Space: brake
+## Important development status
 
-## Important
+This is an early playable prototype, not a finished simulator. The current vehicle uses a single rigid body and approximate grip forces. The wheel meshes rotate for appearance but do not yet have independent suspension, tyre contact patches, tyre temperatures or per-wheel physics. There are no AI opponents, race timing, damage, audio, garage, career or finished production car/track assets yet.
 
-This is the first playable foundation, not a finished realistic simulator. The current track and vehicle visuals are generated from primitives. Suspension travel, individual wheel contact, tyre temperature, gear ratios, damage, AI opponents, race rules, sound, and detailed 3D assets are planned for later milestones. Test on the target phone before increasing graphics quality.
+## Planned milestones
+
+1. Validate project import and runtime on a real Android device.
+2. Implement and tune four-wheel raycast suspension and tyre forces.
+3. Add race session flow, checkpoints, lap timing and reset/recovery.
+4. Add AI opponents and opponent behaviour.
+5. Add audio, vehicle setup, garage and track presentation.
+6. Profile and optimise for target Android devices.

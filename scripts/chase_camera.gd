@@ -7,6 +7,12 @@ extends Camera3D
 
 var target: Node3D
 
+func _ready() -> void:
+	current = true
+	fov = 72.0
+	near = 0.1
+	far = 500.0
+
 func _process(delta: float) -> void:
 	if not is_instance_valid(target):
 		return

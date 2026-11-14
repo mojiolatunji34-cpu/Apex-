@@ -17,6 +17,7 @@ func _setup_input() -> void:
 	_add_key_action("reverse", KEY_S)
 	_add_key_action("reverse", KEY_DOWN)
 	_add_key_action("brake", KEY_SPACE)
+	_add_key_action("handbrake", KEY_SHIFT)
 	_add_key_action("steer_left", KEY_A)
 	_add_key_action("steer_left", KEY_LEFT)
 	_add_key_action("steer_right", KEY_D)
@@ -59,6 +60,19 @@ func _build_track() -> void:
 	_add_barrier(Vector3(0, 0.65, 40), Vector3(70, 1.3, 0.7))
 	_add_barrier(Vector3(-33, 0.65, 0), Vector3(0.7, 1.3, 82))
 	_add_barrier(Vector3(33, 0.65, 0), Vector3(0.7, 1.3, 82))
+	_add_start_line()
+
+func _add_start_line() -> void:
+	for i in range(12):
+		var tile := MeshInstance3D.new()
+		var mesh := BoxMesh.new()
+		mesh.size = Vector3(0.52, 0.025, 0.72)
+		tile.mesh = mesh
+		tile.position = Vector3(-2.86 + float(i) * 0.52, 0.055, 22.0)
+		var material := StandardMaterial3D.new()
+		material.albedo_color = Color.WHITE if i % 2 == 0 else Color(0.04, 0.04, 0.05)
+		tile.material_override = material
+		add_child(tile)
 
 func _add_road(pos: Vector3, dimensions: Vector3) -> void:
 	var road_body := StaticBody3D.new()
@@ -101,7 +115,7 @@ func _add_barrier(pos: Vector3, dimensions: Vector3) -> void:
 func _spawn_player_car() -> void:
 	var car := CarScript.new()
 	car.name = "PlayerCar"
-	car.position = Vector3(26.5, 1.0, 21.0)
+	car.position = Vector3(26.5, 0.85, 21.0)
 	add_child(car)
 
 	var camera := CameraScript.new()
