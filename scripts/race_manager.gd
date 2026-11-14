@@ -89,6 +89,9 @@ func restart_race() -> void:
 		player.reset_vehicle()
 	race_updated.emit(current_lap, next_checkpoint, race_time, best_lap_time)
 
+func is_race_finished() -> bool:
+	return race_finished
+
 func get_lap_text() -> String:
 	if race_finished:
 		return "RACE COMPLETE"

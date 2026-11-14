@@ -13,6 +13,7 @@ var result_label: Label
 var is_paused: bool = false
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	var root := Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
@@ -95,7 +96,7 @@ func _process(_delta: float) -> void:
 		time_label.text = race_ref.get_time_text()
 		checkpoint_label.text = race_ref.get_checkpoint_text()
 		best_label.text = race_ref.get_best_lap_text()
-		if race_ref.race_finished:
+		if race_ref.is_race_finished():
 			result_label.text = "RACE COMPLETE\nTIME  " + race_ref.get_time_text() + "\nBEST  " + race_ref.get_best_lap_text().replace("BEST ", "")
 			result_panel.visible = true
 
