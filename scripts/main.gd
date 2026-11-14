@@ -69,7 +69,7 @@ func _add_start_line() -> void:
 		var mesh := BoxMesh.new()
 		mesh.size = Vector3(0.52, 0.025, 0.72)
 		tile.mesh = mesh
-		tile.position = Vector3(-2.86 + float(i) * 0.52, 0.055, 22.0)
+		tile.position = Vector3(-2.86 + float(i) * 0.52, 0.055, 26.0)
 		var material := StandardMaterial3D.new()
 		material.albedo_color = Color.WHITE if i % 2 == 0 else Color(0.04, 0.04, 0.05)
 		tile.material_override = material

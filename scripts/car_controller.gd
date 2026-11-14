@@ -23,6 +23,7 @@ var brake_input: float = 0.0
 var handbrake_input: float = 0.0
 var wheel_visuals: Array[MeshInstance3D] = []
 var suspension_rays: Array[RayCast3D] = []
+var wheel_is_front: Array[bool] = []
 var previous_compression: Array[float] = [0.0, 0.0, 0.0, 0.0]
 var spawn_transform: Transform3D
 
@@ -57,14 +58,14 @@ func _physics_process(delta: float) -> void:
 		ray.force_raycast_update()
 		var wheel := wheel_visuals[i]
 		if not ray.is_colliding():
-			wheel.visible = true
+			previous_compression[i] = 0.0
+			wheel.visible = false
 			continue
 
 		grounded_wheels += 1
 		var hit_point: Vector3 = ray.get_collision_point()
 		var hit_normal: Vector3 = ray.get_collision_normal().normalized()
-		var ray_origin: Vector3 = ray.global_position
-		var travel_distance := ray_origin.distance_to(hit_point)
+		var travel_distance := ray.global_position.distance_to(hit_point)
 		var compression := suspension_rest_length - (travel_distance - wheel_radius)
 		var compression_velocity := (compression - previous_compression[i]) / maxf(delta, 0.0001)
 		previous_compression[i] = compression
@@ -72,9 +73,9 @@ func _physics_process(delta: float) -> void:
 		var local_contact := to_local(hit_point)
 		var point_velocity := get_velocity_at_local_position(local_contact)
 		var suspension_force := maxf(0.0, compression * suspension_spring + compression_velocity * suspension_damper)
-		apply_force(hit_normal * suspension_force, global_position.direction_to(hit_point) * 0.0 + (hit_point - global_position))
+		apply_force(hit_normal * suspension_force, hit_point - global_position)
 
-		var is_front := i < 2
+		var is_front := wheel_is_front[i]
 		var steer_angle := deg_to_rad(max_steer_degrees) * steer_input if is_front else 0.0
 		var wheel_forward := (-global_transform.basis.z).rotated(hit_normal, steer_angle).normalized()
 		var wheel_right := wheel_forward.cross(hit_normal).normalized()
@@ -94,17 +95,13 @@ func _physics_process(delta: float) -> void:
 		apply_force(wheel_forward * longitudinal_force, hit_point - global_position)
 
 		wheel.position = to_local(hit_point + hit_normal * wheel_radius)
+		wheel.rotation.y = steer_angle
 		wheel.visible = true
 		wheel.rotate_object_local(Vector3.RIGHT, long_speed * delta / maxf(wheel_radius, 0.01))
 
 	if speed_kmh > 8.0:
 		apply_central_force(-global_transform.basis.y * speed_kmh * downforce)
-
-	# Prevent a car from accumulating huge sideways speed when briefly airborne.
-	if grounded_wheels == 0:
-		linear_damp = 0.18
-	else:
-		linear_damp = 0.08
+	linear_damp = 0.18 if grounded_wheels == 0 else 0.08
 
 func get_speed_kmh() -> float:
 	return linear_velocity.length() * 3.6
@@ -165,6 +162,7 @@ func _build_vehicle_visuals() -> void:
 			ray.collide_with_bodies = true
 			add_child(ray)
 			suspension_rays.append(ray)
+			wheel_is_front.append(z < 0.0)
 
 			var wheel := MeshInstance3D.new()
 			var wheel_mesh := CylinderMesh.new()
