@@ -43,14 +43,15 @@ func _ready() -> void:
 	pedals.anchor_right = 1.0
 	pedals.anchor_bottom = 1.0
 	pedals.offset_left = -142
-	pedals.offset_top = -218
+	pedals.offset_top = -258
 	pedals.offset_right = -18
 	pedals.offset_bottom = -18
-	pedals.add_theme_constant_override("separation", 8)
+	pedals.add_theme_constant_override("separation", 6)
 	root.add_child(pedals)
-	_add_action_button(pedals, "ACCEL", "accelerate", Vector2(118, 82))
-	_add_action_button(pedals, "BRAKE", "brake", Vector2(118, 82))
-	_add_action_button(pedals, "HANDBRAKE", "handbrake", Vector2(118, 42))
+	_add_action_button(pedals, "ACCEL", "accelerate", Vector2(118, 70))
+	_add_action_button(pedals, "BRAKE", "brake", Vector2(118, 70))
+	_add_action_button(pedals, "REVERSE", "reverse", Vector2(118, 44))
+	_add_action_button(pedals, "HANDBRAKE", "handbrake", Vector2(118, 44))
 
 func _process(_delta: float) -> void:
 	if is_instance_valid(car_ref) and is_instance_valid(speed_label):

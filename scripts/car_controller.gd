@@ -30,7 +30,7 @@ func _ready() -> void:
 	can_sleep = false
 	_build_vehicle_visuals()
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	throttle_input = Input.get_action_strength("accelerate") - Input.get_action_strength("reverse")
 	steer_input = Input.get_action_strength("steer_right") - Input.get_action_strength("steer_left")
 	brake_input = Input.get_action_strength("brake")
@@ -66,7 +66,7 @@ func _physics_process(_delta: float) -> void:
 	if speed_kmh > 8.0:
 		apply_central_force(-global_transform.basis.y * speed_kmh * downforce)
 
-	_animate_wheels(_delta)
+	_animate_wheels(delta)
 
 func get_speed_kmh() -> float:
 	return linear_velocity.length() * 3.6
@@ -115,7 +115,7 @@ func _build_vehicle_visuals() -> void:
 			wheel_mesh.height = 0.24
 			wheel.mesh = wheel_mesh
 			wheel.rotation.z = PI / 2.0
-			wheel.position = Vector3(x, -0.16, z)
+			wheel.position = Vector3(x, 0.43, z)
 			wheel.material_override = wheel_material
 			add_child(wheel)
 			wheel_visuals.append(wheel)

@@ -9,7 +9,7 @@ An Android-first 3D racing simulator project built with Godot 4 and the GL Compa
 - Approximate lateral tyre-grip forces and speed-dependent downforce.
 - Rotating wheel visuals (visual animation only; not individual simulated wheel assemblies).
 - Smooth chase camera.
-- Touchscreen steering, accelerator, brake and handbrake controls.
+- Touchscreen steering, accelerator, brake, reverse and handbrake controls.
 - Keyboard controls for desktop testing.
 
 ## Open the project
@@ -25,9 +25,9 @@ An Android-first 3D racing simulator project built with Godot 4 and the GL Compa
 |---|---|---|
 | Accelerate | ACCEL | W / Up |
 | Brake | BRAKE | Space |
+| Reverse | REVERSE | S / Down |
 | Steer | Left / Right | A,D / arrows |
 | Handbrake | HANDBRAKE | Shift |
-| Reverse | Reverse input | S / Down |
 
 ## Important development status
 
