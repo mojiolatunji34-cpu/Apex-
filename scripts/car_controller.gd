@@ -41,12 +41,18 @@ var engine_audio: AudioStreamPlayer3D
 var engine_playback: AudioStreamGeneratorPlayback
 var audio_phase: float = 0.0
 var tyre_smoke: CPUParticles3D
+var damage_amount: float = 0.0
+var collision_cooldown: float = 0.0
+var body_paint_material: StandardMaterial3D
 
 func _ready() -> void:
 	mass = 1150.0
 	linear_damp = 0.08
 	angular_damp = 1.8
 	continuous_cd = true
+	contact_monitor = true
+	max_contacts_reported = 8
+	body_entered.connect(_on_collision_body_entered)
 	can_sleep = false
 	spawn_transform = global_transform
 	_build_vehicle_visuals()
@@ -126,7 +132,8 @@ func _physics_process(delta: float) -> void:
 	var forward_speed := linear_velocity.dot(-global_transform.basis.z)
 	var speed_kmh := linear_velocity.length() * 3.6
 	_update_powertrain(delta, speed_kmh, forward_speed)
-	var drive := throttle_input
+	collision_cooldown = maxf(0.0, collision_cooldown - delta)
+	var drive := throttle_input * get_engine_health_factor()
 	if drive > 0.0 and forward_speed * 3.6 >= max_speed_kmh:
 		drive = 0.0
 	if drive < 0.0 and forward_speed > 1.0:
@@ -192,7 +199,26 @@ func _physics_process(delta: float) -> void:
 	if tyre_smoke != null:
 		tyre_smoke.emitting = handbrake_input > 0.25 and speed_kmh > 35.0 and grounded_wheels >= 2
 
-func _update_powertrain(delta: float, speed_kmh: float, forward_speed: float) -> void:
+func _on_collision_body_entered(_body: Node) -> void:
+	if collision_cooldown > 0.0:
+		return
+	register_collision_impact(linear_velocity.length())
+
+func register_collision_impact(impact_speed_mps: float) -> void:
+	if impact_speed_mps < 12.0:
+		return
+	var added_damage: float = clampf((impact_speed_mps - 10.0) * 1.7, 0.0, 34.0)
+	damage_amount = clampf(damage_amount + added_damage, 0.0, 100.0)
+	collision_cooldown = 0.8
+	if body_paint_material != null:
+		body_paint_material.albedo_color = body_color.lerp(Color(0.22, 0.12, 0.10), damage_amount / 125.0)
+
+func get_engine_health_factor() -> float:
+	return 1.0 - (damage_amount / 100.0) * 0.48
+
+func get_damage_text() -> String:
+	return "DAMAGE %02d%%" % roundi(damage_amount)
+
 	shift_cooldown = maxf(0.0, shift_cooldown - delta)
 	if forward_speed < -1.0:
 		current_gear = 1
@@ -285,6 +311,10 @@ func reset_vehicle() -> void:
 		previous_compression[i] = 0.0
 	ai_target_index = 0
 	current_gear = 1
+	damage_amount = 0.0
+	collision_cooldown = 0.0
+	if body_paint_material != null:
+		body_paint_material.albedo_color = body_color
 	engine_rpm = 900.0
 	shift_cooldown = 0.0
 	throttle_input = 0.0
@@ -309,6 +339,7 @@ func _build_vehicle_visuals() -> void:
 	body_mesh.mesh = box_mesh
 	body_mesh.position.y = 0.4
 	var paint := StandardMaterial3D.new()
+	body_paint_material = paint
 	paint.albedo_color = body_color
 	paint.metallic = 0.72
 	paint.roughness = 0.26

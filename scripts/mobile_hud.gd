@@ -3,6 +3,7 @@ extends CanvasLayer
 var speed_label: Label
 var gear_label: Label
 var rpm_label: Label
+var damage_label: Label
 var lap_label: Label
 var time_label: Label
 var checkpoint_label: Label
@@ -24,6 +25,7 @@ func _ready() -> void:
 	speed_label = _make_label(root, Vector2(24, 18), 34, "000 km/h")
 	gear_label = _make_label(root, Vector2(26, 166), 24, "GEAR 1")
 	rpm_label = _make_label(root, Vector2(26, 194), 16, "RPM 0900")
+	damage_label = _make_label(root, Vector2(26, 216), 15, "DAMAGE 00%")
 	lap_label = _make_label(root, Vector2(26, 62), 20, "LAP 1 / 3")
 	time_label = _make_label(root, Vector2(26, 90), 18, "00:00.000")
 	checkpoint_label = _make_label(root, Vector2(26, 116), 14, "CHECKPOINT 1 / 4")
@@ -102,6 +104,8 @@ func _process(_delta: float) -> void:
 		speed_label.text = "%03d km/h" % roundi(car_ref.get_speed_kmh())
 		gear_label.text = "GEAR " + car_ref.get_gear_text()
 		rpm_label.text = "RPM %04d" % roundi(car_ref.get_rpm())
+		damage_label.text = car_ref.get_damage_text()
+		damage_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.22) if car_ref.damage_amount >= 35.0 else Color.WHITE)
 	if is_instance_valid(race_ref):
 		lap_label.text = race_ref.get_lap_text()
 		time_label.text = race_ref.get_time_text()

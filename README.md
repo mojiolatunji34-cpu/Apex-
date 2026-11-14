@@ -15,6 +15,7 @@ Android-first 3D racing simulator prototype built with Godot 4 and the GL Compat
 - Six-speed automatic gear/RPM simulation with live cockpit-style HUD readouts.
 - Procedurally synthesized spatial engine sound for player and AI vehicles, with pitch and volume responding to RPM and throttle.
 - Handbrake-triggered tyre smoke particle effect while sliding at speed.
+- Collision damage model with impact thresholds, reduced engine output, visual paint wear and repair on vehicle reset.
 - Lightweight procedural trackside trees and spectator grandstand scenery.
 - Automated headless runtime smoke test for scene startup, player/rival spawning, HUD wiring and race restart.
 - Two waypoint-following AI rival cars with adjustable cruise speeds.

@@ -37,6 +37,16 @@ func _run_smoke_test() -> void:
 		push_error("Smoke test failed: spatial engine audio player was not created")
 		quit(1)
 		return
+	player.register_collision_impact(22.0)
+	if player.damage_amount <= 0.0 or player.get_engine_health_factor() >= 1.0:
+		push_error("Smoke test failed: collision damage did not affect vehicle health")
+		quit(1)
+		return
+	player.reset_vehicle()
+	if player.damage_amount != 0.0:
+		push_error("Smoke test failed: vehicle reset did not repair collision damage")
+		quit(1)
+		return
 	if player.get_gear_text() != "1" or player.get_rpm() <= 0.0:
 		push_error("Smoke test failed: powertrain telemetry did not initialize")
 		quit(1)
