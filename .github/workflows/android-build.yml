@@ -29,7 +29,7 @@ jobs:
 
       - name: Install Android SDK packages
         run: |
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;23.2.8568313"
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest" "cmake;3.10.2.4988404" "ndk;23.2.8568313"
 
       - name: Download Godot 4.3 and Android export templates
         run: |
@@ -41,24 +41,22 @@ jobs:
           unzip -q export-templates.tpz -d export-templates
           cp -a export-templates/templates/. "$HOME/.local/share/godot/export_templates/4.3.stable/"
 
-      - name: Configure Godot Android SDK paths
+      - name: Create temporary Android debug signing key
         run: |
-          mkdir -p "$HOME/.config/godot"
-          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
-          [gd_resource type="EditorSettings" format=3]
-
-          [resource]
-          export/android/android_sdk_path = "$ANDROID_HOME"
-          export/android/java_sdk_path = "$JAVA_HOME"
-          EOF
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
       - name: Import project
         run: godot-bin/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit
 
       - name: Export debug APK
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ runner.temp }}/../.android/debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           mkdir -p build
-          godot-bin/Godot_v4.3-stable_linux.x86_64 --headless --path . --export-debug "Android" build/ApexRacing-debug.apk
+          godot-bin/Godot_v4.3-stable_linux.x86_64 --headless --verbose --path . --export-debug "Android" build/ApexRacing-debug.apk
           test -s build/ApexRacing-debug.apk
 
       - name: Upload APK
