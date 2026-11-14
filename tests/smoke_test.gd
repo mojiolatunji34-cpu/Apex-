@@ -71,6 +71,10 @@ func _run_smoke_test() -> void:
 		push_error("Smoke test failed: high-speed steering reduction is missing")
 		quit(1)
 		return
+	if player.tyre_grip <= 0.0 or player.suspension_spring <= 0.0:
+		push_error("Smoke test failed: tyre or suspension tuning is invalid")
+		quit(1)
+		return
 	if player.get_gear_text() != "1" or player.get_rpm() <= 0.0:
 		push_error("Smoke test failed: powertrain telemetry did not initialize")
 		quit(1)

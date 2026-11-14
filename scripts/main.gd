@@ -244,7 +244,8 @@ func _add_lighting() -> void:
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-52, -28, 0)
 	sun.light_energy = 1.15
-	sun.shadow_enabled = true
+	# Keep shadow rendering disabled on entry-level Android GPUs.
+	sun.shadow_enabled = false
 	add_child(sun)
 
 	var world_environment := WorldEnvironment.new()

@@ -51,6 +51,6 @@ func _process(delta: float) -> void:
 	global_position = global_position.lerp(desired, clampf(delta * position_smoothing, 0.0, 1.0))
 	fov = lerpf(fov, 72.0 + speed_factor * 8.0, delta * 2.0)
 	look_at(target.global_position + Vector3.UP * look_height + look_ahead, Vector3.UP)
-	var target_roll := -steer_factor * speed_factor * 0.022
+	var target_roll := -steer_factor * speed_factor * 0.018
 	camera_roll = lerpf(camera_roll, target_roll, clampf(delta * 3.5, 0.0, 1.0))
 	rotation.z = camera_roll

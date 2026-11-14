@@ -15,12 +15,17 @@ var pause_button: Button
 var result_panel: PanelContainer
 var result_label: Label
 var is_paused: bool = false
+var root_control: Control
+var steering_control: HBoxContainer
+var pedals_control: VBoxContainer
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	var root := Control.new()
-	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(root)
+	root_control = Control.new()
+	root_control.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(root_control)
+	var root := root_control
+	root.resized.connect(_layout_for_viewport)
 
 	speed_label = _make_label(root, Vector2(24, 18), 34, "000 km/h")
 	gear_label = _make_label(root, Vector2(26, 166), 24, "GEAR 1")
@@ -36,6 +41,7 @@ func _ready() -> void:
 	countdown_label.add_theme_color_override("font_color", Color(1.0, 0.86, 0.18))
 
 	var steering := HBoxContainer.new()
+	steering_control = steering
 	steering.anchor_left = 0.0
 	steering.anchor_top = 1.0
 	steering.anchor_right = 0.0
@@ -50,6 +56,7 @@ func _ready() -> void:
 	_add_action_button(steering, "▶", "steer_right", Vector2(96, 88))
 
 	var pedals := VBoxContainer.new()
+	pedals_control = pedals
 	pedals.anchor_left = 1.0
 	pedals.anchor_top = 1.0
 	pedals.anchor_right = 1.0
@@ -98,6 +105,44 @@ func _ready() -> void:
 	result_restart.custom_minimum_size = Vector2(180, 52)
 	result_restart.pressed.connect(_restart_race)
 	result_content.add_child(result_restart)
+	_layout_for_viewport()
+
+func _layout_for_viewport() -> void:
+	if not is_instance_valid(root_control):
+		return
+	var viewport_size := root_control.size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return
+	var scale_factor := clampf(minf(viewport_size.x / 1280.0, viewport_size.y / 720.0), 0.72, 1.0)
+	var compact := viewport_size.y > viewport_size.x
+	var labels := [speed_label, lap_label, time_label, checkpoint_label, best_label, gear_label, rpm_label, damage_label]
+	var y_offsets := [14.0, 58.0, 84.0, 108.0, 130.0, 156.0, 184.0, 206.0]
+	for i in range(labels.size()):
+		if is_instance_valid(labels[i]):
+			labels[i].position = Vector2(16.0 * scale_factor, y_offsets[i] * scale_factor)
+			labels[i].scale = Vector2.ONE * scale_factor
+	if is_instance_valid(steering_control):
+		steering_control.offset_left = 14.0
+		steering_control.offset_top = -104.0 * scale_factor
+		steering_control.offset_right = 204.0 * scale_factor
+		steering_control.offset_bottom = -12.0
+		for button in steering_control.get_children():
+			if button is Button:
+				button.custom_minimum_size = Vector2(88.0, 82.0) * scale_factor
+	if is_instance_valid(pedals_control):
+		var pedal_width := 112.0 * scale_factor
+		pedals_control.offset_left = -pedal_width - 12.0
+		pedals_control.offset_top = (-250.0 if compact else -278.0) * scale_factor
+		pedals_control.offset_right = -12.0
+		pedals_control.offset_bottom = -10.0
+		for button in pedals_control.get_children():
+			if button is Button:
+				button.custom_minimum_size = Vector2(pedal_width, 54.0 * scale_factor)
+	if is_instance_valid(pause_button):
+		pause_button.custom_minimum_size = Vector2(104.0, 40.0) * scale_factor
+		pause_button.position = Vector2(-116.0 * scale_factor, 12.0 * scale_factor)
+	if is_instance_valid(result_panel):
+		result_panel.custom_minimum_size = Vector2(maxf(240.0, minf(360.0, viewport_size.x - 32.0)), 180.0) * scale_factor
 
 func _process(_delta: float) -> void:
 	if is_instance_valid(car_ref):
@@ -132,9 +177,11 @@ func _add_action_button(parent: Container, caption: String, action: String, butt
 	button.custom_minimum_size = button_size
 	button.add_theme_font_size_override("font_size", 19 if caption.length() < 7 else 13)
 	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	button.modulate = Color(1, 1, 1, 0.9)
 	button.button_down.connect(_press_action.bind(action))
 	button.button_up.connect(_release_action.bind(action))
+	button.tree_exiting.connect(_release_action.bind(action))
 	parent.add_child(button)
 
 func _press_action(action: String) -> void:

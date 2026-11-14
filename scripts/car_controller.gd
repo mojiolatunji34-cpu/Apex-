@@ -52,6 +52,7 @@ var body_paint_material: StandardMaterial3D
 var body_animation_nodes: Array[MeshInstance3D] = []
 var visual_roll: float = 0.0
 var visual_pitch: float = 0.0
+var ai_recovery_timer: float = 0.0
 
 func _ready() -> void:
 	mass = 1150.0
@@ -74,7 +75,7 @@ func _setup_tyre_smoke() -> void:
 	tyre_smoke = CPUParticles3D.new()
 	tyre_smoke.name = "TyreSmoke"
 	tyre_smoke.position = Vector3(0.0, -0.12, 1.45)
-	tyre_smoke.amount = 28
+	tyre_smoke.amount = 14 if not ai_controlled else 0
 	tyre_smoke.lifetime = 0.7
 	tyre_smoke.emitting = false
 	tyre_smoke.local_coords = false
@@ -169,7 +170,8 @@ func _physics_process(delta: float) -> void:
 		var hit_point: Vector3 = ray.get_collision_point()
 		var hit_normal: Vector3 = ray.get_collision_normal().normalized()
 		var travel_distance := ray.global_position.distance_to(hit_point)
-		var compression := suspension_rest_length - (travel_distance - wheel_radius)
+		var raw_compression := suspension_rest_length - (travel_distance - wheel_radius)
+		var compression := clampf(raw_compression, 0.0, suspension_rest_length)
 		var compression_velocity := (compression - previous_compression[i]) / maxf(delta, 0.0001)
 		previous_compression[i] = compression
 
@@ -190,14 +192,15 @@ func _physics_process(delta: float) -> void:
 		var max_tyre_force := suspension_force * tyre_grip * grip_scale
 		var lateral_response := lerpf(2.9, 2.35, clampf(speed_kmh / 180.0, 0.0, 1.0))
 		var lateral_force := clampf(-side_speed * mass * lateral_response, -max_tyre_force, max_tyre_force)
-		apply_force(wheel_right * lateral_force, hit_point - global_position)
-
-		var longitudinal_force := 0.0
+		var requested_longitudinal_force := 0.0
 		if not is_front:
-			longitudinal_force += drive * (engine_force if drive >= 0.0 else reverse_force) * 0.5
+			requested_longitudinal_force += drive * (engine_force if drive >= 0.0 else reverse_force) * 0.5
 		if brake_input > 0.0:
-			longitudinal_force += -signf(long_speed) * brake_force * brake_input * 0.25
-		longitudinal_force = clampf(longitudinal_force, -max_tyre_force, max_tyre_force)
+			requested_longitudinal_force += -signf(long_speed) * brake_force * brake_input * 0.25
+		# A friction circle prevents full lateral and longitudinal grip at once.
+		var remaining_grip := sqrt(maxf(max_tyre_force * max_tyre_force - lateral_force * lateral_force, 0.0))
+		var longitudinal_force := clampf(requested_longitudinal_force, -remaining_grip, remaining_grip)
+		apply_force(wheel_right * lateral_force, hit_point - global_position)
 		apply_force(wheel_forward * longitudinal_force, hit_point - global_position)
 
 		var wheel_target: Vector3 = to_local(hit_point + hit_normal * wheel_radius)
@@ -290,30 +293,40 @@ func _read_player_controls() -> void:
 	handbrake_input = Input.get_action_strength("handbrake")
 
 func _update_ai_controls() -> void:
-	if ai_waypoints.is_empty():
+	if ai_waypoints.size() < 2:
 		throttle_input = 0.0
 		steer_input = 0.0
 		brake_input = 1.0
 		handbrake_input = 0.0
 		return
 
-	var target := ai_waypoints[ai_target_index]
-	if global_position.distance_to(target) < 11.0:
+	var speed_kmh := get_speed_kmh()
+	var advance_distance := clampf(7.0 + speed_kmh * 0.055, 7.0, 16.0)
+	# Consume passed waypoints safely, even when the rival is moving quickly.
+	for step in range(ai_waypoints.size()):
+		var point: Vector3 = ai_waypoints[ai_target_index]
+		var to_point := point - global_position
+		var passed_point := to_point.dot(-global_transform.basis.z) < -2.0
+		if to_point.length() > advance_distance and not passed_point:
+			break
 		ai_target_index = (ai_target_index + 1) % ai_waypoints.size()
-		target = ai_waypoints[ai_target_index]
 
-	# Aim slightly ahead of the waypoint to reduce sharp steering changes.
+	var target: Vector3 = ai_waypoints[ai_target_index]
 	var next_index := (ai_target_index + 1) % ai_waypoints.size()
-	var lookahead_target := target.lerp(ai_waypoints[next_index], 0.22)
+	var lookahead_distance := clampf(8.0 + speed_kmh * 0.075, 8.0, 20.0)
+	var segment_length := target.distance_to(ai_waypoints[next_index])
+	var blend := clampf(lookahead_distance / maxf(segment_length, 0.1), 0.12, 0.72)
+	var lookahead_target := target.lerp(ai_waypoints[next_index], blend)
 	var local_target := global_transform.basis.inverse() * (lookahead_target - global_position)
 	var target_angle := atan2(local_target.x, maxf(-local_target.z, 0.1))
-	var desired_steer := clampf(target_angle / 0.72, -1.0, 1.0)
+	var desired_steer := clampf(target_angle / 0.68, -1.0, 1.0)
 
-	# Three forward probes let rivals choose a clearer side when another car is ahead.
+	# Three probes let rivals select a clear side instead of steering blindly.
 	var forward := -global_transform.basis.z
 	var ray_start := global_position + Vector3.UP * 0.55
 	var space := get_world_3d().direct_space_state
-	var center_query := PhysicsRayQueryParameters3D.create(ray_start, ray_start + forward * 9.0)
+	var probe_length := clampf(9.0 + speed_kmh * 0.035, 9.0, 15.0)
+	var center_query := PhysicsRayQueryParameters3D.create(ray_start, ray_start + forward * probe_length)
 	center_query.exclude = [get_rid()]
 	center_query.collision_mask = 1
 	var center_hit := space.intersect_ray(center_query)
@@ -321,8 +334,8 @@ func _update_ai_controls() -> void:
 	if not center_hit.is_empty() and center_hit.collider is ApexCar:
 		var left_direction := forward.rotated(Vector3.UP, 0.42).normalized()
 		var right_direction := forward.rotated(Vector3.UP, -0.42).normalized()
-		var left_query := PhysicsRayQueryParameters3D.create(ray_start, ray_start + left_direction * 7.0)
-		var right_query := PhysicsRayQueryParameters3D.create(ray_start, ray_start + right_direction * 7.0)
+		var left_query := PhysicsRayQueryParameters3D.create(ray_start, ray_start + left_direction * 8.0)
+		var right_query := PhysicsRayQueryParameters3D.create(ray_start, ray_start + right_direction * 8.0)
 		left_query.exclude = [get_rid()]
 		right_query.exclude = [get_rid()]
 		left_query.collision_mask = 1
@@ -331,7 +344,7 @@ func _update_ai_controls() -> void:
 		var right_hit := space.intersect_ray(right_query)
 		var left_blocked := not left_hit.is_empty() and left_hit.collider is ApexCar
 		var right_blocked := not right_hit.is_empty() and right_hit.collider is ApexCar
-		var obstacle_local: Vector3 = global_transform.basis.inverse() * (center_hit.collider as Node3D).global_position - global_transform.basis.inverse() * global_position
+		var obstacle_local := to_local((center_hit.collider as Node3D).global_position)
 		var preferred_side := -1.0 if obstacle_local.x > 0.0 else 1.0
 		if left_blocked and not right_blocked:
 			preferred_side = -1.0
@@ -339,15 +352,15 @@ func _update_ai_controls() -> void:
 			preferred_side = 1.0
 		elif left_blocked and right_blocked:
 			preferred_side = 0.0
-		desired_steer = clampf(desired_steer + preferred_side * 0.62, -1.0, 1.0)
-		obstacle_slowdown = 0.62 if preferred_side != 0.0 else 0.38
+		desired_steer = clampf(desired_steer + preferred_side * 0.58, -1.0, 1.0)
+		obstacle_slowdown = 0.58 if preferred_side != 0.0 else 0.32
 
-	steer_input = move_toward(steer_input, desired_steer, 2.8 * get_physics_process_delta_time())
-	var corner_factor := clampf(1.0 - absf(target_angle) / 1.8, 0.42, 1.0)
+	steer_input = move_toward(steer_input, desired_steer, 3.4 * get_physics_process_delta_time())
+	var corner_factor := clampf(1.0 - absf(target_angle) / 1.55, 0.34, 1.0)
 	var target_speed := ai_cruise_speed_kmh * corner_factor * obstacle_slowdown
-	var speed := get_speed_kmh()
-	throttle_input = clampf((target_speed - speed) / 24.0, 0.0, 1.0)
-	brake_input = clampf((speed - target_speed) / 18.0, 0.0, 1.0)
+	var speed_error := target_speed - speed_kmh
+	throttle_input = clampf(speed_error / 20.0, 0.0, 1.0)
+	brake_input = clampf(-speed_error / 14.0, 0.0, 1.0)
 	handbrake_input = 0.0
 
 func set_ai_route(points: Array[Vector3], cruise_speed: float = 82.0) -> void:
@@ -480,6 +493,7 @@ func _build_vehicle_visuals() -> void:
 		beam.spot_range = 24.0
 		beam.spot_angle = 32.0
 		beam.shadow_enabled = false
+		beam.visible = not ai_controlled
 		add_child(beam)
 
 	brake_light_material = StandardMaterial3D.new()
