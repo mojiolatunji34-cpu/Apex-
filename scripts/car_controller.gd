@@ -309,19 +309,38 @@ func _update_ai_controls() -> void:
 	var target_angle := atan2(local_target.x, maxf(-local_target.z, 0.1))
 	var desired_steer := clampf(target_angle / 0.72, -1.0, 1.0)
 
-	# A forward sensor lets rivals react to another car instead of driving into it.
+	# Three forward probes let rivals choose a clearer side when another car is ahead.
 	var forward := -global_transform.basis.z
 	var ray_start := global_position + Vector3.UP * 0.55
-	var query := PhysicsRayQueryParameters3D.create(ray_start, ray_start + forward * 8.0)
-	query.exclude = [get_rid()]
-	query.collision_mask = 1
-	var obstacle := get_world_3d().direct_space_state.intersect_ray(query)
+	var space := get_world_3d().direct_space_state
+	var center_query := PhysicsRayQueryParameters3D.create(ray_start, ray_start + forward * 9.0)
+	center_query.exclude = [get_rid()]
+	center_query.collision_mask = 1
+	var center_hit := space.intersect_ray(center_query)
 	var obstacle_slowdown := 1.0
-	if not obstacle.is_empty() and obstacle.collider is ApexCar:
-		var obstacle_local: Vector3 = global_transform.basis.inverse() * (obstacle.collider.global_position - global_position)
-		desired_steer += -0.48 if obstacle_local.x > 0.0 else 0.48
-		desired_steer = clampf(desired_steer, -1.0, 1.0)
-		obstacle_slowdown = 0.48
+	if not center_hit.is_empty() and center_hit.collider is ApexCar:
+		var left_direction := forward.rotated(Vector3.UP, 0.42).normalized()
+		var right_direction := forward.rotated(Vector3.UP, -0.42).normalized()
+		var left_query := PhysicsRayQueryParameters3D.create(ray_start, ray_start + left_direction * 7.0)
+		var right_query := PhysicsRayQueryParameters3D.create(ray_start, ray_start + right_direction * 7.0)
+		left_query.exclude = [get_rid()]
+		right_query.exclude = [get_rid()]
+		left_query.collision_mask = 1
+		right_query.collision_mask = 1
+		var left_hit := space.intersect_ray(left_query)
+		var right_hit := space.intersect_ray(right_query)
+		var left_blocked := not left_hit.is_empty() and left_hit.collider is ApexCar
+		var right_blocked := not right_hit.is_empty() and right_hit.collider is ApexCar
+		var obstacle_local: Vector3 = global_transform.basis.inverse() * (center_hit.collider as Node3D).global_position - global_transform.basis.inverse() * global_position
+		var preferred_side := -1.0 if obstacle_local.x > 0.0 else 1.0
+		if left_blocked and not right_blocked:
+			preferred_side = -1.0
+		elif right_blocked and not left_blocked:
+			preferred_side = 1.0
+		elif left_blocked and right_blocked:
+			preferred_side = 0.0
+		desired_steer = clampf(desired_steer + preferred_side * 0.62, -1.0, 1.0)
+		obstacle_slowdown = 0.62 if preferred_side != 0.0 else 0.38
 
 	steer_input = move_toward(steer_input, desired_steer, 2.8 * get_physics_process_delta_time())
 	var corner_factor := clampf(1.0 - absf(target_angle) / 1.8, 0.42, 1.0)
