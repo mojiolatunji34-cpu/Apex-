@@ -45,7 +45,7 @@ func _run_smoke_test() -> void:
 		push_error("Smoke test failed: spatial engine audio player was not created")
 		quit(1)
 		return
-	if player.get_children().filter(func(node): return node is SpotLight3D and node.name == "HeadlightBeam").size() != 2:
+	if player.get_children().filter(func(node): return node is SpotLight3D and node.name.begins_with("HeadlightBeam_")).size() != 2:
 		push_error("Smoke test failed: paired forward headlight beams were not created")
 		quit(1)
 		return

@@ -448,7 +448,7 @@ func _build_vehicle_visuals() -> void:
 
 		# Low-cost forward lamps improve visibility and make the car read clearly at night.
 		var beam := SpotLight3D.new()
-		beam.name = "HeadlightBeam"
+		beam.name = "HeadlightBeam_Left" if x < 0.0 else "HeadlightBeam_Right"
 		beam.position = Vector3(x, 0.42, -1.92)
 		beam.rotation.x = deg_to_rad(-4.0)
 		beam.light_color = Color(0.78, 0.87, 1.0)
