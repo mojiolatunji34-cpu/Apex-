@@ -44,12 +44,10 @@ func _physics_process(_delta: float) -> void:
 	if brake_input > 0.0 and absf(forward_speed) > 0.2:
 		apply_central_force(-forward * signf(forward_speed) * brake_force * brake_input)
 
-	# Counteracts sideways sliding while still allowing controlled drift.
 	var sideways_speed := linear_velocity.dot(right)
 	var grip_factor := clampf(1.0 - speed_kmh / 260.0, 0.35, 1.0)
 	apply_central_force(-right * sideways_speed * lateral_grip * mass * grip_factor)
 
-	# Steering authority builds with speed and fades at very low speed.
 	var steering_factor := clampf(absf(forward_speed) / 5.0, 0.12, 1.0)
 	var direction_factor := -1.0 if forward_speed < -0.5 else 1.0
 	apply_torque(Vector3.UP * steer_input * steering_torque * steering_factor * direction_factor)

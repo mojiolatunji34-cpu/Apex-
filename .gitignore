@@ -1,2 +1,7 @@
-# Google App Engine generated folder
-appengine-generated/
+.godot/
+.import/
+.export/
+export.cfg
+export_presets.cfg
+*.tmp
+.DS_Store

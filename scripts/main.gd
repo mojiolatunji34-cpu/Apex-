@@ -51,7 +51,6 @@ func _build_environment() -> void:
 	add_child(ground_body)
 
 func _build_track() -> void:
-	# Four broad asphalt straights overlap at the corners to form a closed loop.
 	_add_road(Vector3(0, 0, -32), Vector3(66, 0.08, 13))
 	_add_road(Vector3(0, 0, 32), Vector3(66, 0.08, 13))
 	_add_road(Vector3(-26.5, 0, 0), Vector3(13, 0.08, 77))
