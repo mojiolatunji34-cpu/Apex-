@@ -92,6 +92,32 @@ func _run_smoke_test() -> void:
 		quit(1)
 		return
 
+	# Run a short deterministic soak test after restart: the countdown must finish,
+	# the race clock must advance, and every vehicle must retain finite transforms.
+	for frame in range(240):
+		await physics_frame
+	if not race.race_started:
+		push_error("Smoke test failed: race countdown did not complete during soak test")
+		quit(1)
+		return
+	if race.race_time <= 0.0:
+		push_error("Smoke test failed: race timer did not advance during soak test")
+		quit(1)
+		return
+	for vehicle in [player, rivals[0], rivals[1]]:
+		if not is_finite(vehicle.global_position.x) or not is_finite(vehicle.global_position.y) or not is_finite(vehicle.global_position.z):
+			push_error("Smoke test failed: a vehicle produced a non-finite position during soak test")
+			quit(1)
+			return
+		if not is_finite(vehicle.linear_velocity.length()):
+			push_error("Smoke test failed: a vehicle produced a non-finite velocity during soak test")
+			quit(1)
+			return
+		if absf(vehicle.steer_input) > 1.001 or vehicle.throttle_input < -1.001 or vehicle.throttle_input > 1.001:
+			push_error("Smoke test failed: vehicle control output exceeded safe input bounds")
+			quit(1)
+			return
+
 	# Release the generated 3D scene before exiting so the headless renderer can clean up its mesh resources.
 	game.queue_free()
 	await process_frame

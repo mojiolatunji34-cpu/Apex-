@@ -207,7 +207,15 @@ func _reset_car() -> void:
 	if is_instance_valid(car_ref):
 		car_ref.reset_vehicle()
 
-func _exit_tree() -> void:
-	get_tree().paused = false
+func _notification(what: int) -> void:
+	# Android can suspend or background the app while a touch button is held.
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_WINDOW_FOCUS_OUT:
+		_release_all_actions()
+
+func _release_all_actions() -> void:
 	for action in ["steer_left", "steer_right", "accelerate", "brake", "reverse", "handbrake"]:
 		Input.action_release(action)
+
+func _exit_tree() -> void:
+	get_tree().paused = false
+	_release_all_actions()
