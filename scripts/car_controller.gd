@@ -16,6 +16,11 @@ class_name ApexCar
 @export var handbrake_grip: float = 0.32
 @export var max_steer_degrees: float = 30.0
 @export var downforce: float = 38.0
+@export var body_color: Color = Color(0.82, 0.045, 0.025)
+
+@export_group("AI driver")
+@export var ai_controlled: bool = false
+@export var ai_cruise_speed_kmh: float = 82.0
 
 var throttle_input: float = 0.0
 var steer_input: float = 0.0
@@ -25,6 +30,8 @@ var wheel_visuals: Array[MeshInstance3D] = []
 var suspension_rays: Array[RayCast3D] = []
 var wheel_is_front: Array[bool] = []
 var previous_compression: Array[float] = [0.0, 0.0, 0.0, 0.0]
+var ai_waypoints: Array[Vector3] = []
+var ai_target_index: int = 0
 var spawn_transform: Transform3D
 
 func _ready() -> void:
@@ -37,10 +44,10 @@ func _ready() -> void:
 	_build_vehicle_visuals()
 
 func _physics_process(delta: float) -> void:
-	throttle_input = Input.get_action_strength("accelerate") - Input.get_action_strength("reverse")
-	steer_input = Input.get_action_strength("steer_right") - Input.get_action_strength("steer_left")
-	brake_input = Input.get_action_strength("brake")
-	handbrake_input = Input.get_action_strength("handbrake")
+	if ai_controlled:
+		_update_ai_controls()
+	else:
+		_read_player_controls()
 
 	var forward_speed := linear_velocity.dot(-global_transform.basis.z)
 	var speed_kmh := linear_velocity.length() * 3.6
@@ -76,7 +83,7 @@ func _physics_process(delta: float) -> void:
 		apply_force(hit_normal * suspension_force, hit_point - global_position)
 
 		var is_front := wheel_is_front[i]
-		var steer_angle := deg_to_rad(max_steer_degrees) * steer_input if is_front else 0.0
+		var steer_angle := -deg_to_rad(max_steer_degrees) * steer_input if is_front else 0.0
 		var wheel_forward := (-global_transform.basis.z).rotated(hit_normal, steer_angle).normalized()
 		var wheel_right := wheel_forward.cross(hit_normal).normalized()
 		var side_speed := point_velocity.dot(wheel_right)
@@ -102,6 +109,40 @@ func _physics_process(delta: float) -> void:
 	if speed_kmh > 8.0:
 		apply_central_force(-global_transform.basis.y * speed_kmh * downforce)
 	linear_damp = 0.18 if grounded_wheels == 0 else 0.08
+
+func _read_player_controls() -> void:
+	throttle_input = Input.get_action_strength("accelerate") - Input.get_action_strength("reverse")
+	steer_input = Input.get_action_strength("steer_right") - Input.get_action_strength("steer_left")
+	brake_input = Input.get_action_strength("brake")
+	handbrake_input = Input.get_action_strength("handbrake")
+
+func _update_ai_controls() -> void:
+	if ai_waypoints.is_empty():
+		throttle_input = 0.0
+		steer_input = 0.0
+		brake_input = 1.0
+		handbrake_input = 0.0
+		return
+
+	var target := ai_waypoints[ai_target_index]
+	if global_position.distance_to(target) < 9.0:
+		ai_target_index = (ai_target_index + 1) % ai_waypoints.size()
+		target = ai_waypoints[ai_target_index]
+
+	var local_target := global_transform.basis.inverse() * (target - global_position)
+	var target_angle := atan2(local_target.x, maxf(-local_target.z, 0.1))
+	steer_input = clampf(target_angle / 0.62, -1.0, 1.0)
+	var corner_factor := clampf(1.0 - absf(target_angle) / 2.0, 0.38, 1.0)
+	var target_speed := ai_cruise_speed_kmh * corner_factor
+	var speed := get_speed_kmh()
+	throttle_input = clampf((target_speed - speed) / 28.0, 0.0, 1.0)
+	brake_input = clampf((speed - target_speed) / 22.0, 0.0, 1.0)
+	handbrake_input = 0.0
+
+func set_ai_route(points: Array[Vector3], cruise_speed: float = 82.0) -> void:
+	ai_waypoints = points.duplicate()
+	ai_cruise_speed_kmh = cruise_speed
+	ai_target_index = 0
 
 func get_speed_kmh() -> float:
 	return linear_velocity.length() * 3.6
@@ -131,7 +172,7 @@ func _build_vehicle_visuals() -> void:
 	body_mesh.mesh = box_mesh
 	body_mesh.position.y = 0.4
 	var paint := StandardMaterial3D.new()
-	paint.albedo_color = Color(0.82, 0.045, 0.025)
+	paint.albedo_color = body_color
 	paint.metallic = 0.72
 	paint.roughness = 0.26
 	body_mesh.material_override = paint

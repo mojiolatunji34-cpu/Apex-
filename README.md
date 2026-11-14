@@ -10,6 +10,7 @@ Android-first 3D racing simulator prototype built with Godot 4 and the GL Compat
 - Animated wheel meshes positioned from suspension ray hits.
 - Smooth chase camera and touchscreen steering/pedals.
 - Three-lap race session with ordered checkpoints, race timer and best-lap display.
+- Two waypoint-following AI rival cars with adjustable cruise speeds.
 - Vehicle reset button and keyboard controls for desktop testing.
 
 ## Open the project

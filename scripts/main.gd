@@ -132,11 +132,32 @@ func _spawn_player_car() -> void:
 	add_child(camera)
 	camera.current = true
 
+	var ai_route: Array[Vector3] = [
+		Vector3(26.5, 0.0, -30.0),
+		Vector3(0.0, 0.0, -32.0),
+		Vector3(-26.5, 0.0, -30.0),
+		Vector3(-26.5, 0.0, 30.0),
+		Vector3(0.0, 0.0, 32.0),
+		Vector3(26.5, 0.0, 30.0)
+	]
+	_spawn_ai_car("Rival_01", Vector3(23.4, 0.85, 27.0), Color(0.025, 0.24, 0.82), ai_route, 76.0)
+	_spawn_ai_car("Rival_02", Vector3(29.6, 0.85, 27.0), Color(0.95, 0.58, 0.025), ai_route, 72.0)
+
 	var hud := HudScript.new()
 	hud.name = "MobileHUD"
 	hud.car_ref = car
 	hud.race_ref = race
 	add_child(hud)
+
+func _spawn_ai_car(car_name: String, spawn_point: Vector3, paint_color: Color, route: Array[Vector3], cruise_speed: float) -> void:
+	var rival := CarScript.new()
+	rival.name = car_name
+	rival.position = spawn_point
+	rival.body_color = paint_color
+	rival.ai_controlled = true
+	add_child(rival)
+	rival.set_spawn_transform(rival.global_transform)
+	rival.set_ai_route(route, cruise_speed)
 
 func _add_lighting() -> void:
 	var sun := DirectionalLight3D.new()
