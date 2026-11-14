@@ -23,7 +23,7 @@ Android-first 3D racing simulator prototype built with Godot 4 and the GL Compat
 
 ## Android debug APK
 
-A GitHub Actions workflow builds a debug APK for arm64 Android devices whenever changes are pushed to `main`. Open the repository's **Actions** tab, select **Build Android debug APK**, open the latest successful run, and download the `Apex-Racing-Android-Debug` artifact. Extract the ZIP to get the APK, then install it on your test phone. This is a development build, not a Play Store release.
+A GitHub Actions workflow prepares the Godot 4.3 Android export templates, Android SDK/NDK, and a temporary debug signing key, then attempts to export an arm64 APK on pushes to `main`. When the export job succeeds, download the `Apex-Racing-Android-Debug` artifact from that run's **Actions** page. Extract the ZIP to get the APK. This is a development build, not a Play Store release; it is not a Play Store submission.
 
 The build requires the Android export templates and Android SDK, which the workflow installs automatically.
 
