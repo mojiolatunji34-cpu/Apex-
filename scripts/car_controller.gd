@@ -47,6 +47,9 @@ var tyre_smoke: CPUParticles3D
 var damage_amount: float = 0.0
 var collision_cooldown: float = 0.0
 var body_paint_material: StandardMaterial3D
+var body_animation_nodes: Array[MeshInstance3D] = []
+var visual_roll: float = 0.0
+var visual_pitch: float = 0.0
 
 func _ready() -> void:
 	mass = 1150.0
@@ -136,6 +139,7 @@ func _physics_process(delta: float) -> void:
 	var speed_kmh := linear_velocity.length() * 3.6
 	_update_powertrain(delta, speed_kmh, forward_speed)
 	smoothed_steer = move_toward(smoothed_steer, steer_input, steering_smoothing * delta)
+	_update_visual_body_animation(delta, speed_kmh)
 	collision_cooldown = maxf(0.0, collision_cooldown - delta)
 	var drive := throttle_input * get_engine_health_factor()
 	if drive > 0.0 and forward_speed * 3.6 >= max_speed_kmh:
@@ -176,7 +180,7 @@ func _physics_process(delta: float) -> void:
 		var wheel_right := wheel_forward.cross(hit_normal).normalized()
 		var side_speed := point_velocity.dot(wheel_right)
 		var long_speed := point_velocity.dot(wheel_forward)
-			var grip_scale := handbrake_grip if handbrake_input > 0.0 and not is_front else (1.06 if is_front else 1.0)
+		var grip_scale := handbrake_grip if handbrake_input > 0.0 and not is_front else (1.06 if is_front else 1.0)
 		var max_tyre_force := suspension_force * tyre_grip * grip_scale
 		var lateral_response := lerpf(2.9, 2.35, clampf(speed_kmh / 180.0, 0.0, 1.0))
 		var lateral_force := clampf(-side_speed * mass * lateral_response, -max_tyre_force, max_tyre_force)
@@ -204,6 +208,17 @@ func _physics_process(delta: float) -> void:
 	linear_damp = 0.18 if grounded_wheels == 0 else 0.08
 	if tyre_smoke != null:
 		tyre_smoke.emitting = handbrake_input > 0.25 and speed_kmh > 35.0 and grounded_wheels >= 2
+
+func _update_visual_body_animation(delta: float, speed_kmh: float) -> void:
+	var speed_factor: float = clampf(speed_kmh / 150.0, 0.0, 1.0)
+	var target_roll: float = clampf(-smoothed_steer * speed_factor * 0.075, -0.075, 0.075)
+	var target_pitch: float = clampf(-throttle_input * 0.028 + brake_input * 0.042, -0.035, 0.05)
+	visual_roll = lerpf(visual_roll, target_roll, clampf(delta * 5.5, 0.0, 1.0))
+	visual_pitch = lerpf(visual_pitch, target_pitch, clampf(delta * 4.5, 0.0, 1.0))
+	for visual in body_animation_nodes:
+		if is_instance_valid(visual):
+			visual.rotation.z = visual_roll
+			visual.rotation.x = visual_pitch
 
 func _on_collision_body_entered(_body: Node) -> void:
 	if collision_cooldown > 0.0:
@@ -326,6 +341,11 @@ func reset_vehicle() -> void:
 	collision_cooldown = 0.0
 	if body_paint_material != null:
 		body_paint_material.albedo_color = body_color
+	visual_roll = 0.0
+	visual_pitch = 0.0
+	for visual in body_animation_nodes:
+		if is_instance_valid(visual):
+			visual.rotation = Vector3.ZERO
 	engine_rpm = 900.0
 	shift_cooldown = 0.0
 	throttle_input = 0.0
@@ -357,6 +377,7 @@ func _build_vehicle_visuals() -> void:
 	paint.roughness = 0.26
 	body_mesh.material_override = paint
 	add_child(body_mesh)
+	body_animation_nodes.append(body_mesh)
 
 	var cabin := MeshInstance3D.new()
 	var cabin_mesh := BoxMesh.new()
@@ -369,6 +390,7 @@ func _build_vehicle_visuals() -> void:
 	glass.roughness = 0.16
 	cabin.material_override = glass
 	add_child(cabin)
+	body_animation_nodes.append(cabin)
 
 	var wheel_material := StandardMaterial3D.new()
 	wheel_material.albedo_color = Color(0.035, 0.035, 0.04)
@@ -411,6 +433,7 @@ func _build_vehicle_visuals() -> void:
 		headlamp.position = Vector3(x, 0.48, -1.9)
 		headlamp.material_override = lamp_material
 		add_child(headlamp)
+		body_animation_nodes.append(headlamp)
 
 	brake_light_material = StandardMaterial3D.new()
 	brake_light_material.albedo_color = Color(0.8, 0.015, 0.01)
@@ -425,6 +448,7 @@ func _build_vehicle_visuals() -> void:
 		tail_lamp.position = Vector3(x, 0.48, 1.9)
 		tail_lamp.material_override = brake_light_material
 		add_child(tail_lamp)
+		body_animation_nodes.append(tail_lamp)
 
 	var spoiler := MeshInstance3D.new()
 	var spoiler_mesh := BoxMesh.new()
@@ -433,3 +457,4 @@ func _build_vehicle_visuals() -> void:
 	spoiler.position = Vector3(0, 0.88, 1.65)
 	spoiler.material_override = paint
 	add_child(spoiler)
+	body_animation_nodes.append(spoiler)

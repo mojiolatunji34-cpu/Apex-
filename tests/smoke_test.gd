@@ -33,6 +33,10 @@ func _run_smoke_test() -> void:
 		push_error("Smoke test failed: tyre smoke effect was not created")
 		quit(1)
 		return
+	if player.body_animation_nodes.size() < 5:
+		push_error("Smoke test failed: animated body visual nodes were not registered")
+		quit(1)
+		return
 	if player.get_node_or_null("EngineAudio") == null:
 		push_error("Smoke test failed: spatial engine audio player was not created")
 		quit(1)
