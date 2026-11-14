@@ -47,6 +47,14 @@ func _run_smoke_test() -> void:
 		push_error("Smoke test failed: vehicle reset did not repair collision damage")
 		quit(1)
 		return
+	if not is_equal_approx(player.get_steering_limit_degrees(0.0), player.max_steer_degrees):
+		push_error("Smoke test failed: low-speed steering limit is incorrect")
+		quit(1)
+		return
+	if player.get_steering_limit_degrees(180.0) >= player.max_steer_degrees:
+		push_error("Smoke test failed: high-speed steering reduction is missing")
+		quit(1)
+		return
 	if player.get_gear_text() != "1" or player.get_rpm() <= 0.0:
 		push_error("Smoke test failed: powertrain telemetry did not initialize")
 		quit(1)

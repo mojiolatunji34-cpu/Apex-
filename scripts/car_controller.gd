@@ -15,6 +15,8 @@ class_name ApexCar
 @export var tyre_grip: float = 1.15
 @export var handbrake_grip: float = 0.32
 @export var max_steer_degrees: float = 30.0
+@export var high_speed_steer_factor: float = 0.52
+@export var steering_smoothing: float = 4.2
 @export var downforce: float = 38.0
 @export var body_color: Color = Color(0.82, 0.045, 0.025)
 
@@ -24,6 +26,7 @@ class_name ApexCar
 
 var throttle_input: float = 0.0
 var steer_input: float = 0.0
+var smoothed_steer: float = 0.0
 var brake_input: float = 0.0
 var handbrake_input: float = 0.0
 var wheel_visuals: Array[MeshInstance3D] = []
@@ -132,6 +135,7 @@ func _physics_process(delta: float) -> void:
 	var forward_speed := linear_velocity.dot(-global_transform.basis.z)
 	var speed_kmh := linear_velocity.length() * 3.6
 	_update_powertrain(delta, speed_kmh, forward_speed)
+	smoothed_steer = move_toward(smoothed_steer, steer_input, steering_smoothing * delta)
 	collision_cooldown = maxf(0.0, collision_cooldown - delta)
 	var drive := throttle_input * get_engine_health_factor()
 	if drive > 0.0 and forward_speed * 3.6 >= max_speed_kmh:
@@ -166,14 +170,16 @@ func _physics_process(delta: float) -> void:
 		apply_force(hit_normal * suspension_force, hit_point - global_position)
 
 		var is_front := wheel_is_front[i]
-		var steer_angle := -deg_to_rad(max_steer_degrees) * steer_input if is_front else 0.0
+		var steer_limit := get_steering_limit_degrees(speed_kmh)
+		var steer_angle := -deg_to_rad(steer_limit) * smoothed_steer if is_front else 0.0
 		var wheel_forward := (-global_transform.basis.z).rotated(hit_normal, steer_angle).normalized()
 		var wheel_right := wheel_forward.cross(hit_normal).normalized()
 		var side_speed := point_velocity.dot(wheel_right)
 		var long_speed := point_velocity.dot(wheel_forward)
-		var grip_scale := handbrake_grip if handbrake_input > 0.0 and not is_front else 1.0
-		var max_tyre_force := suspension_force * tyre_grip
-		var lateral_force := clampf(-side_speed * mass * 2.8 * grip_scale, -max_tyre_force, max_tyre_force)
+			var grip_scale := handbrake_grip if handbrake_input > 0.0 and not is_front else (1.06 if is_front else 1.0)
+		var max_tyre_force := suspension_force * tyre_grip * grip_scale
+		var lateral_response := lerpf(2.9, 2.35, clampf(speed_kmh / 180.0, 0.0, 1.0))
+		var lateral_force := clampf(-side_speed * mass * lateral_response, -max_tyre_force, max_tyre_force)
 		apply_force(wheel_right * lateral_force, hit_point - global_position)
 
 		var longitudinal_force := 0.0
@@ -240,6 +246,10 @@ func _update_powertrain(delta: float, speed_kmh: float, forward_speed: float) ->
 	if throttle_input > 0.1:
 		target_rpm = minf(7800.0, target_rpm + throttle_input * 650.0)
 	engine_rpm = lerpf(engine_rpm, target_rpm, clampf(delta * 7.0, 0.0, 1.0))
+
+func get_steering_limit_degrees(speed_kmh: float) -> float:
+	var speed_factor := clampf((speed_kmh - 35.0) / 115.0, 0.0, 1.0)
+	return lerpf(max_steer_degrees, max_steer_degrees * high_speed_steer_factor, speed_factor)
 
 func get_gear_text() -> String:
 	return "R" if throttle_input < -0.1 else str(current_gear)
@@ -320,6 +330,7 @@ func reset_vehicle() -> void:
 	shift_cooldown = 0.0
 	throttle_input = 0.0
 	steer_input = 0.0
+	smoothed_steer = 0.0
 	brake_input = 0.0
 	handbrake_input = 0.0
 
