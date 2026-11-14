@@ -41,6 +41,11 @@ func _run_smoke_test() -> void:
 		push_error("Smoke test failed: four wheel steering pivots and wheel meshes were not created")
 		quit(1)
 		return
+	for wheel_pivot in player.wheel_steering_pivots:
+		if wheel_pivot.get_node_or_null("WheelRim") == null or wheel_pivot.get_node_or_null("WheelHub") == null:
+			push_error("Smoke test failed: wheel rim or hub detail is missing")
+			quit(1)
+			return
 	if player.get_node_or_null("EngineAudio") == null:
 		push_error("Smoke test failed: spatial engine audio player was not created")
 		quit(1)

@@ -435,6 +435,19 @@ func _build_vehicle_visuals() -> void:
 	add_child(cabin)
 	body_animation_nodes.append(cabin)
 
+	# Layered body panels improve the prototype sports-car silhouette.
+	var trim_material := StandardMaterial3D.new()
+	trim_material.albedo_color = Color(0.018, 0.022, 0.028)
+	trim_material.metallic = 0.38
+	trim_material.roughness = 0.42
+	_add_box_visual("HoodPanel", Vector3(1.48, 0.10, 1.05), Vector3(0.0, 0.70, -1.18), paint, true)
+	_add_box_visual("RearDeck", Vector3(1.48, 0.10, 0.72), Vector3(0.0, 0.70, 1.38), paint, true)
+	_add_box_visual("FrontSplitter", Vector3(1.82, 0.08, 0.30), Vector3(0.0, 0.13, -1.91), trim_material)
+	_add_box_visual("RearDiffuser", Vector3(1.72, 0.10, 0.28), Vector3(0.0, 0.13, 1.91), trim_material)
+	for side in [-1.0, 1.0]:
+		_add_box_visual("SideSkirt", Vector3(0.12, 0.18, 2.35), Vector3(side * 0.94, 0.15, 0.08), trim_material)
+		_add_box_visual("SideMirror", Vector3(0.22, 0.13, 0.24), Vector3(side * 0.82, 0.78, -0.52), paint, true)
+
 	var wheel_material := StandardMaterial3D.new()
 	wheel_material.albedo_color = Color(0.035, 0.035, 0.04)
 	wheel_material.roughness = 0.88
@@ -465,6 +478,34 @@ func _build_vehicle_visuals() -> void:
 			wheel.rotation.z = PI / 2.0
 			wheel.material_override = wheel_material
 			wheel_pivot.add_child(wheel)
+
+			# Metallic rim faces and a central hub rotate with each wheel.
+			var rim_material := StandardMaterial3D.new()
+			rim_material.albedo_color = Color(0.48, 0.53, 0.59)
+			rim_material.metallic = 0.92
+			rim_material.roughness = 0.22
+			for rim_side in [-1.0, 1.0]:
+				var rim := MeshInstance3D.new()
+				rim.name = "WheelRim"
+				var rim_mesh := CylinderMesh.new()
+				rim_mesh.top_radius = 0.235
+				rim_mesh.bottom_radius = 0.235
+				rim_mesh.height = 0.035
+				rim.mesh = rim_mesh
+				rim.rotation.z = PI / 2.0
+				rim.position.x = rim_side * 0.125
+				rim.material_override = rim_material
+				wheel_pivot.add_child(rim)
+			var hub := MeshInstance3D.new()
+			hub.name = "WheelHub"
+			var hub_mesh := CylinderMesh.new()
+			hub_mesh.top_radius = 0.095
+			hub_mesh.bottom_radius = 0.095
+			hub_mesh.height = 0.27
+			hub.mesh = hub_mesh
+			hub.rotation.z = PI / 2.0
+			hub.material_override = trim_material
+			wheel_pivot.add_child(hub)
 			wheel_visuals.append(wheel)
 
 	# Visible headlamps and emissive rear brake lamps help communicate vehicle orientation.
@@ -533,3 +574,17 @@ func _build_vehicle_visuals() -> void:
 	spoiler.material_override = paint
 	add_child(spoiler)
 	body_animation_nodes.append(spoiler)
+
+
+func _add_box_visual(node_name: String, dimensions: Vector3, local_position: Vector3, material: Material, animate_with_body: bool = false) -> MeshInstance3D:
+	var visual := MeshInstance3D.new()
+	visual.name = node_name
+	var mesh := BoxMesh.new()
+	mesh.size = dimensions
+	visual.mesh = mesh
+	visual.position = local_position
+	visual.material_override = material
+	add_child(visual)
+	if animate_with_body:
+		body_animation_nodes.append(visual)
+	return visual
