@@ -37,6 +37,9 @@ var brake_light_material: StandardMaterial3D
 var current_gear: int = 1
 var engine_rpm: float = 900.0
 var shift_cooldown: float = 0.0
+var engine_audio: AudioStreamPlayer3D
+var engine_playback: AudioStreamGeneratorPlayback
+var audio_phase: float = 0.0
 
 func _ready() -> void:
 	mass = 1150.0
@@ -46,6 +49,45 @@ func _ready() -> void:
 	can_sleep = false
 	spawn_transform = global_transform
 	_build_vehicle_visuals()
+	_setup_engine_audio()
+
+func _process(_delta: float) -> void:
+	_update_engine_audio()
+
+func _setup_engine_audio() -> void:
+	var generator := AudioStreamGenerator.new()
+	generator.mix_rate = 22050.0
+	generator.buffer_length = 0.18
+	engine_audio = AudioStreamPlayer3D.new()
+	engine_audio.name = "EngineAudio"
+	engine_audio.stream = generator
+	engine_audio.volume_db = -9.0
+	engine_audio.unit_size = 8.0
+	engine_audio.max_distance = 65.0
+	add_child(engine_audio)
+	engine_audio.play()
+	engine_playback = engine_audio.get_stream_playback() as AudioStreamGeneratorPlayback
+
+func _update_engine_audio() -> void:
+	if engine_playback == null:
+		return
+	var frames_to_fill: int = mini(engine_playback.get_frames_available(), 512)
+	if frames_to_fill <= 0:
+		return
+	var rpm_ratio: float = clampf(engine_rpm / 7800.0, 0.0, 1.0)
+	var frequency: float = lerpf(28.0, 260.0, rpm_ratio)
+	var volume: float = 0.035 + clampf(absf(throttle_input), 0.0, 1.0) * 0.055
+	var samples := PackedVector2Array()
+	for i in range(frames_to_fill):
+		audio_phase += TAU * frequency / 22050.0
+		if audio_phase > TAU:
+			audio_phase -= TAU
+		var fundamental: float = sin(audio_phase)
+		var harmonic: float = sin(audio_phase * 2.0) * 0.34
+		var upper_harmonic: float = sin(audio_phase * 3.0) * 0.12
+		var sample: float = (fundamental + harmonic + upper_harmonic) * volume
+		samples.append(Vector2(sample, sample))
+	engine_playback.push_buffer(samples)
 
 func _physics_process(delta: float) -> void:
 	if ai_controlled:
