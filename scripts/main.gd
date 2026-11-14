@@ -164,7 +164,8 @@ func _spawn_player_car() -> void:
 	]
 	var rival_one := _spawn_ai_car("Rival_01", Vector3(23.4, 0.85, 27.0), Color(0.025, 0.24, 0.82), ai_route, 76.0)
 	var rival_two := _spawn_ai_car("Rival_02", Vector3(29.6, 0.85, 27.0), Color(0.95, 0.58, 0.025), ai_route, 72.0)
-	race.set_rivals([rival_one, rival_two])
+	var rivals: Array[ApexCar] = [rival_one, rival_two]
+	race.set_rivals(rivals)
 
 	var hud := HudScript.new()
 	hud.name = "MobileHUD"
