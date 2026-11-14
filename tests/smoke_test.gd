@@ -29,6 +29,10 @@ func _run_smoke_test() -> void:
 		push_error("Smoke test failed: chase camera is not current")
 		quit(1)
 		return
+	if player.get_node_or_null("TyreSmoke") == null:
+		push_error("Smoke test failed: tyre smoke effect was not created")
+		quit(1)
+		return
 	if player.get_node_or_null("EngineAudio") == null:
 		push_error("Smoke test failed: spatial engine audio player was not created")
 		quit(1)
