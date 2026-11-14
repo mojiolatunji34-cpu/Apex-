@@ -83,7 +83,8 @@ func _physics_process(delta: float) -> void:
 		previous_compression[i] = compression
 
 		var local_contact := to_local(hit_point)
-		var point_velocity := get_velocity_at_local_position(local_contact)
+		var world_contact_offset: Vector3 = global_transform.basis * local_contact
+		var point_velocity: Vector3 = linear_velocity + angular_velocity.cross(world_contact_offset)
 		var suspension_force := maxf(0.0, compression * suspension_spring + compression_velocity * suspension_damper)
 		apply_force(hit_normal * suspension_force, hit_point - global_position)
 
@@ -182,7 +183,7 @@ func _update_ai_controls() -> void:
 	var obstacle := get_world_3d().direct_space_state.intersect_ray(query)
 	var obstacle_slowdown := 1.0
 	if not obstacle.is_empty() and obstacle.collider is ApexCar:
-		var obstacle_local := global_transform.basis.inverse() * (obstacle.collider.global_position - global_position)
+		var obstacle_local: Vector3 = global_transform.basis.inverse() * (obstacle.collider.global_position - global_position)
 		desired_steer += -0.48 if obstacle_local.x > 0.0 else 0.48
 		desired_steer = clampf(desired_steer, -1.0, 1.0)
 		obstacle_slowdown = 0.48
