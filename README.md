@@ -17,9 +17,15 @@ Android-first 3D racing simulator prototype built with Godot 4 and the GL Compat
 - Handbrake-triggered tyre smoke particle effect while sliding at speed.
 - Collision damage model with impact thresholds, reduced engine output, visual paint wear and repair on vehicle reset.
 - Lightweight procedural trackside trees and spectator grandstand scenery.
-- Automated headless runtime smoke test for scene startup, player/rival spawning, HUD wiring and race restart.
+- Automated headless runtime smoke test for scene startup, player/rival spawning, HUD wiring, race restart and a short multi-frame vehicle/race soak check.
 - Two waypoint-following AI rival cars with adjustable cruise speeds.
 - Vehicle reset button and keyboard controls for desktop testing.
+
+## Android debug APK
+
+A GitHub Actions workflow builds a debug APK for arm64 Android devices whenever changes are pushed to `main`. Open the repository's **Actions** tab, select **Build Android debug APK**, open the latest successful run, and download the `Apex-Racing-Android-Debug` artifact. Extract the ZIP to get the APK, then install it on your test phone. This is a development build, not a Play Store release.
+
+The build requires the Android export templates and Android SDK, which the workflow installs automatically.
 
 ## Open the project
 
