@@ -134,7 +134,8 @@ func _update_powertrain(delta: float, speed_kmh: float, forward_speed: float) ->
 	elif shift_cooldown <= 0.0 and current_gear > 1 and speed_kmh < gear_limits[current_gear - 1] - 10.0:
 		current_gear -= 1
 		shift_cooldown = 0.35
-	var gear_ratio := [3.25, 2.18, 1.58, 1.22, 0.98, 0.82][current_gear - 1]
+	var gear_ratios: Array[float] = [3.25, 2.18, 1.58, 1.22, 0.98, 0.82]
+	var gear_ratio: float = gear_ratios[current_gear - 1]
 	var target_rpm := clampf(900.0 + speed_kmh * gear_ratio * 48.0, 900.0, 7600.0)
 	if throttle_input > 0.1:
 		target_rpm = minf(7800.0, target_rpm + throttle_input * 650.0)
