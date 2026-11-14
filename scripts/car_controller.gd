@@ -33,6 +33,7 @@ var previous_compression: Array[float] = [0.0, 0.0, 0.0, 0.0]
 var ai_waypoints: Array[Vector3] = []
 var ai_target_index: int = 0
 var spawn_transform: Transform3D
+var brake_light_material: StandardMaterial3D
 
 func _ready() -> void:
 	mass = 1150.0
@@ -106,6 +107,10 @@ func _physics_process(delta: float) -> void:
 		wheel.visible = true
 		wheel.rotate_object_local(Vector3.RIGHT, long_speed * delta / maxf(wheel_radius, 0.01))
 
+	if brake_light_material != null:
+		brake_light_material.emission_enabled = brake_input > 0.05 or throttle_input < -0.05
+		brake_light_material.emission = Color(1.0, 0.025, 0.01)
+		brake_light_material.emission_energy_multiplier = 1.8 if brake_input > 0.05 else 0.65
 	if speed_kmh > 8.0:
 		apply_central_force(-global_transform.basis.y * speed_kmh * downforce)
 	linear_damp = 0.18 if grounded_wheels == 0 else 0.08
@@ -173,6 +178,11 @@ func reset_vehicle() -> void:
 	sleeping = false
 	for i in range(previous_compression.size()):
 		previous_compression[i] = 0.0
+	ai_target_index = 0
+	throttle_input = 0.0
+	steer_input = 0.0
+	brake_input = 0.0
+	handbrake_input = 0.0
 
 func set_spawn_transform(value: Transform3D) -> void:
 	spawn_transform = value
@@ -235,6 +245,35 @@ func _build_vehicle_visuals() -> void:
 			wheel.material_override = wheel_material
 			add_child(wheel)
 			wheel_visuals.append(wheel)
+
+	# Visible headlamps and emissive rear brake lamps help communicate vehicle orientation.
+	var lamp_material := StandardMaterial3D.new()
+	lamp_material.albedo_color = Color(0.82, 0.9, 1.0)
+	lamp_material.emission_enabled = true
+	lamp_material.emission = Color(0.65, 0.82, 1.0)
+	lamp_material.emission_energy_multiplier = 0.8
+	for x in [-0.62, 0.62]:
+		var headlamp := MeshInstance3D.new()
+		var lamp_mesh := BoxMesh.new()
+		lamp_mesh.size = Vector3(0.34, 0.12, 0.06)
+		headlamp.mesh = lamp_mesh
+		headlamp.position = Vector3(x, 0.48, -1.9)
+		headlamp.material_override = lamp_material
+		add_child(headlamp)
+
+	brake_light_material = StandardMaterial3D.new()
+	brake_light_material.albedo_color = Color(0.8, 0.015, 0.01)
+	brake_light_material.emission_enabled = true
+	brake_light_material.emission = Color(1.0, 0.025, 0.01)
+	brake_light_material.emission_energy_multiplier = 0.65
+	for x in [-0.65, 0.65]:
+		var tail_lamp := MeshInstance3D.new()
+		var tail_mesh := BoxMesh.new()
+		tail_mesh.size = Vector3(0.32, 0.13, 0.06)
+		tail_lamp.mesh = tail_mesh
+		tail_lamp.position = Vector3(x, 0.48, 1.9)
+		tail_lamp.material_override = brake_light_material
+		add_child(tail_lamp)
 
 	var spoiler := MeshInstance3D.new()
 	var spoiler_mesh := BoxMesh.new()

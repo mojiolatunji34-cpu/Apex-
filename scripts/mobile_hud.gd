@@ -5,6 +5,7 @@ var lap_label: Label
 var time_label: Label
 var checkpoint_label: Label
 var best_label: Label
+var countdown_label: Label
 var car_ref: ApexCar
 var race_ref: Node
 var pause_button: Button
@@ -23,6 +24,10 @@ func _ready() -> void:
 	time_label = _make_label(root, Vector2(26, 90), 18, "00:00.000")
 	checkpoint_label = _make_label(root, Vector2(26, 116), 14, "CHECKPOINT 1 / 4")
 	best_label = _make_label(root, Vector2(26, 138), 14, "BEST --:--.---")
+	countdown_label = _make_label(root, Vector2(0, 0), 58, "3")
+	countdown_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	countdown_label.position = Vector2(-28, -58)
+	countdown_label.add_theme_color_override("font_color", Color(1.0, 0.86, 0.18))
 
 	var steering := HBoxContainer.new()
 	steering.anchor_left = 0.0
@@ -96,6 +101,8 @@ func _process(_delta: float) -> void:
 		time_label.text = race_ref.get_time_text()
 		checkpoint_label.text = race_ref.get_checkpoint_text()
 		best_label.text = race_ref.get_best_lap_text()
+		countdown_label.text = race_ref.get_countdown_text()
+		countdown_label.visible = not countdown_label.text.is_empty() and not race_ref.is_race_finished()
 		if race_ref.is_race_finished():
 			result_label.text = "RACE COMPLETE\nTIME  " + race_ref.get_time_text() + "\nBEST  " + race_ref.get_best_lap_text().replace("BEST ", "")
 			result_panel.visible = true

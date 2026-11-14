@@ -12,6 +12,9 @@ var lap_start_time: float = 0.0
 var best_lap_time: float = 0.0
 var race_finished: bool = false
 var checkpoint_areas: Array[Area3D] = []
+var rival_cars: Array[ApexCar] = []
+var countdown_remaining: float = 3.0
+var race_started: bool = false
 
 func _ready() -> void:
 	_create_checkpoint(0, Vector3(26.5, 1.0, -20.0), Vector3(10.0, 2.5, 1.5))
@@ -23,11 +26,27 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if race_finished or not is_instance_valid(player):
 		return
+	if not race_started:
+		countdown_remaining = maxf(0.0, countdown_remaining - delta)
+		if countdown_remaining <= 0.0:
+			race_started = true
+			race_time = 0.0
+			lap_start_time = 0.0
+		race_updated.emit(current_lap, next_checkpoint, race_time, best_lap_time)
+		return
 	race_time += delta
 	race_updated.emit(current_lap, next_checkpoint, race_time, best_lap_time)
 
 func set_player(value: ApexCar) -> void:
 	player = value
+
+func set_rivals(values: Array[ApexCar]) -> void:
+	rival_cars = values.duplicate()
+
+func get_countdown_text() -> String:
+	if race_started:
+		return "GO!" if race_time < 1.0 else ""
+	return str(maxi(1, ceili(countdown_remaining)))
 
 func _create_checkpoint(index: int, point: Vector3, size: Vector3) -> void:
 	var area := Area3D.new()
@@ -59,13 +78,13 @@ func _create_finish_gate() -> void:
 	add_child(area)
 
 func _on_checkpoint_body_entered(body: Node3D, index: int) -> void:
-	if body != player or race_finished or index != next_checkpoint:
+	if body != player or race_finished or not race_started or index != next_checkpoint:
 		return
 	next_checkpoint += 1
 	race_updated.emit(current_lap, next_checkpoint, race_time, best_lap_time)
 
 func _on_finish_body_entered(body: Node3D) -> void:
-	if body != player or race_finished or next_checkpoint < 4:
+	if body != player or race_finished or not race_started or next_checkpoint < 4:
 		return
 	var completed_lap := race_time - lap_start_time
 	if best_lap_time <= 0.0 or completed_lap < best_lap_time:
@@ -85,8 +104,13 @@ func restart_race() -> void:
 	lap_start_time = 0.0
 	best_lap_time = 0.0
 	race_finished = false
+	race_started = false
+	countdown_remaining = 3.0
 	if is_instance_valid(player):
 		player.reset_vehicle()
+	for rival in rival_cars:
+		if is_instance_valid(rival):
+			rival.reset_vehicle()
 	race_updated.emit(current_lap, next_checkpoint, race_time, best_lap_time)
 
 func is_race_finished() -> bool:

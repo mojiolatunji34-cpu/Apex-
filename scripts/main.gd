@@ -9,6 +9,7 @@ func _ready() -> void:
 	_setup_input()
 	_build_environment()
 	_build_track()
+	_add_track_markings()
 	_spawn_player_car()
 	_add_lighting()
 
@@ -75,6 +76,27 @@ func _add_start_line() -> void:
 		tile.material_override = material
 		add_child(tile)
 
+func _add_track_markings() -> void:
+	# High-contrast edge stripes make the rectangular prototype circuit easier to read.
+	var white := StandardMaterial3D.new()
+	white.albedo_color = Color(0.88, 0.89, 0.84)
+	var red := StandardMaterial3D.new()
+	red.albedo_color = Color(0.78, 0.045, 0.025)
+	for side in [-1.0, 1.0]:
+		for x in range(-28, 29, 4):
+			_add_marking(Vector3(float(x), 0.065, side * 37.7), Vector3(3.0, 0.035, 0.34), red if posmod(x, 8) == 0 else white)
+		for z in range(-36, 37, 4):
+			_add_marking(Vector3(side * 32.2, 0.065, float(z)), Vector3(0.34, 0.035, 3.0), red if posmod(z, 8) == 0 else white)
+
+func _add_marking(point: Vector3, dimensions: Vector3, material: Material) -> void:
+	var marker := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = dimensions
+	marker.mesh = mesh
+	marker.position = point
+	marker.material_override = material
+	add_child(marker)
+
 func _add_road(pos: Vector3, dimensions: Vector3) -> void:
 	var road_body := StaticBody3D.new()
 	road_body.position = pos
@@ -140,8 +162,9 @@ func _spawn_player_car() -> void:
 		Vector3(0.0, 0.0, 32.0),
 		Vector3(26.5, 0.0, 30.0)
 	]
-	_spawn_ai_car("Rival_01", Vector3(23.4, 0.85, 27.0), Color(0.025, 0.24, 0.82), ai_route, 76.0)
-	_spawn_ai_car("Rival_02", Vector3(29.6, 0.85, 27.0), Color(0.95, 0.58, 0.025), ai_route, 72.0)
+	var rival_one := _spawn_ai_car("Rival_01", Vector3(23.4, 0.85, 27.0), Color(0.025, 0.24, 0.82), ai_route, 76.0)
+	var rival_two := _spawn_ai_car("Rival_02", Vector3(29.6, 0.85, 27.0), Color(0.95, 0.58, 0.025), ai_route, 72.0)
+	race.set_rivals([rival_one, rival_two])
 
 	var hud := HudScript.new()
 	hud.name = "MobileHUD"
@@ -149,7 +172,7 @@ func _spawn_player_car() -> void:
 	hud.race_ref = race
 	add_child(hud)
 
-func _spawn_ai_car(car_name: String, spawn_point: Vector3, paint_color: Color, route: Array[Vector3], cruise_speed: float) -> void:
+func _spawn_ai_car(car_name: String, spawn_point: Vector3, paint_color: Color, route: Array[Vector3], cruise_speed: float) -> ApexCar:
 	var rival := CarScript.new()
 	rival.name = car_name
 	rival.position = spawn_point
@@ -158,6 +181,7 @@ func _spawn_ai_car(car_name: String, spawn_point: Vector3, paint_color: Color, r
 	add_child(rival)
 	rival.set_spawn_transform(rival.global_transform)
 	rival.set_ai_route(route, cruise_speed)
+	return rival
 
 func _add_lighting() -> void:
 	var sun := DirectionalLight3D.new()

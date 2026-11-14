@@ -9,7 +9,9 @@ Android-first 3D racing simulator prototype built with Godot 4 and the GL Compat
 - Per-wheel tyre lateral grip and rear-wheel drive forces, with braking and handbrake grip changes.
 - Animated wheel meshes positioned from suspension ray hits.
 - Smooth chase camera and touchscreen steering/pedals.
-- Three-lap race session with ordered checkpoints, race timer and best-lap display.
+- Three-lap race session with a 3-2-1 start countdown, ordered checkpoints, race timer and best-lap display.
+- Pause/resume, race completion panel and full race restart including AI rivals.
+- Basic brake-light feedback, headlamp visuals and high-contrast track edge kerbs.
 - Two waypoint-following AI rival cars with adjustable cruise speeds.
 - Vehicle reset button and keyboard controls for desktop testing.
 
@@ -33,4 +35,4 @@ Android-first 3D racing simulator prototype built with Godot 4 and the GL Compat
 
 ## Development status
 
-The four wheel assemblies now have raycast-based suspension and approximate tyre forces, but this is still an early physics model that needs tuning in a running game. It is not a validated professional vehicle simulator. Race timing and checkpoint logic are prototype systems. AI opponents, multiple finished tracks and cars, audio, damage, garage, upgrades and production assets remain future work.
+The four wheel assemblies now have raycast-based suspension and approximate tyre forces, but this is still an early physics model that needs tuning in a running game. It is not a validated professional vehicle simulator. Race timing and checkpoint logic are prototype systems. The AI and vehicle handling still need live playtesting and tuning. Multiple finished tracks and cars, engine/tyre audio, damage, garage, upgrades and production assets remain future work.
