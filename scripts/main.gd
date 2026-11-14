@@ -1,0 +1,135 @@
+extends Node3D
+
+const CarScript = preload("res://scripts/car_controller.gd")
+const CameraScript = preload("res://scripts/chase_camera.gd")
+const HudScript = preload("res://scripts/mobile_hud.gd")
+
+func _ready() -> void:
+	_setup_input()
+	_build_environment()
+	_build_track()
+	_spawn_player_car()
+	_add_lighting()
+
+func _setup_input() -> void:
+	_add_key_action("accelerate", KEY_W)
+	_add_key_action("accelerate", KEY_UP)
+	_add_key_action("reverse", KEY_S)
+	_add_key_action("reverse", KEY_DOWN)
+	_add_key_action("brake", KEY_SPACE)
+	_add_key_action("steer_left", KEY_A)
+	_add_key_action("steer_left", KEY_LEFT)
+	_add_key_action("steer_right", KEY_D)
+	_add_key_action("steer_right", KEY_RIGHT)
+
+func _add_key_action(action_name: String, key: Key) -> void:
+	if not InputMap.has_action(action_name):
+		InputMap.add_action(action_name)
+	var event := InputEventKey.new()
+	event.physical_keycode = key
+	InputMap.action_add_event(action_name, event)
+
+func _build_environment() -> void:
+	var ground := MeshInstance3D.new()
+	var ground_mesh := PlaneMesh.new()
+	ground_mesh.size = Vector2(150, 150)
+	ground.mesh = ground_mesh
+	var grass := StandardMaterial3D.new()
+	grass.albedo_color = Color(0.12, 0.31, 0.13)
+	grass.roughness = 1.0
+	ground.material_override = grass
+	ground.position.y = -0.12
+	add_child(ground)
+
+	var ground_body := StaticBody3D.new()
+	ground_body.position.y = -0.2
+	var ground_collision := CollisionShape3D.new()
+	var ground_shape := BoxShape3D.new()
+	ground_shape.size = Vector3(150, 0.3, 150)
+	ground_collision.shape = ground_shape
+	ground_body.add_child(ground_collision)
+	add_child(ground_body)
+
+func _build_track() -> void:
+	# Four broad asphalt straights overlap at the corners to form a closed loop.
+	_add_road(Vector3(0, 0, -32), Vector3(66, 0.08, 13))
+	_add_road(Vector3(0, 0, 32), Vector3(66, 0.08, 13))
+	_add_road(Vector3(-26.5, 0, 0), Vector3(13, 0.08, 77))
+	_add_road(Vector3(26.5, 0, 0), Vector3(13, 0.08, 77))
+	_add_barrier(Vector3(0, 0.65, -40), Vector3(70, 1.3, 0.7))
+	_add_barrier(Vector3(0, 0.65, 40), Vector3(70, 1.3, 0.7))
+	_add_barrier(Vector3(-33, 0.65, 0), Vector3(0.7, 1.3, 82))
+	_add_barrier(Vector3(33, 0.65, 0), Vector3(0.7, 1.3, 82))
+
+func _add_road(pos: Vector3, dimensions: Vector3) -> void:
+	var road_body := StaticBody3D.new()
+	road_body.position = pos
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = dimensions
+	collision.shape = shape
+	road_body.add_child(collision)
+	var visual := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = dimensions
+	visual.mesh = mesh
+	var asphalt := StandardMaterial3D.new()
+	asphalt.albedo_color = Color(0.105, 0.115, 0.13)
+	asphalt.roughness = 0.94
+	visual.material_override = asphalt
+	road_body.add_child(visual)
+	add_child(road_body)
+
+func _add_barrier(pos: Vector3, dimensions: Vector3) -> void:
+	var wall := StaticBody3D.new()
+	wall.position = pos
+	var collision := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = dimensions
+	collision.shape = shape
+	wall.add_child(collision)
+	var visual := MeshInstance3D.new()
+	var mesh := BoxMesh.new()
+	mesh.size = dimensions
+	visual.mesh = mesh
+	var material := StandardMaterial3D.new()
+	material.albedo_color = Color(0.82, 0.82, 0.78)
+	material.roughness = 0.8
+	visual.material_override = material
+	wall.add_child(visual)
+	add_child(wall)
+
+func _spawn_player_car() -> void:
+	var car := CarScript.new()
+	car.name = "PlayerCar"
+	car.position = Vector3(26.5, 1.0, 21.0)
+	add_child(car)
+
+	var camera := CameraScript.new()
+	camera.name = "ChaseCamera"
+	camera.target = car
+	camera.position = car.position + Vector3(0, 5, 9)
+	add_child(camera)
+	camera.current = true
+
+	var hud := HudScript.new()
+	hud.name = "MobileHUD"
+	hud.car_ref = car
+	add_child(hud)
+
+func _add_lighting() -> void:
+	var sun := DirectionalLight3D.new()
+	sun.rotation_degrees = Vector3(-52, -28, 0)
+	sun.light_energy = 1.15
+	sun.shadow_enabled = true
+	add_child(sun)
+
+	var world_environment := WorldEnvironment.new()
+	var environment := Environment.new()
+	environment.background_mode = Environment.BG_SKY
+	environment.sky = Sky.new()
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	environment.ambient_light_color = Color(0.55, 0.62, 0.72)
+	environment.ambient_light_energy = 0.55
+	world_environment.environment = environment
+	add_child(world_environment)
