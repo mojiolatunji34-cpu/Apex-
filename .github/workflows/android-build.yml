@@ -59,6 +59,10 @@ jobs:
           test -x "$ANDROID_HOME/platform-tools/adb"
           test -f "$ANDROID_HOME/ndk/23.2.8568313/source.properties"
           test -f "$ANDROID_HOME/build-tools/34.0.0/apksigner"
+          # Godot 4.3 validates the preset's debug signing values as well as Editor Settings.
+          # Keep the ephemeral CI key out of the committed preset and inject it only in this runner.
+          sed -i '/^\[preset\.0\.options\]/a keystore/debug="'+"$HOME"+'/.android/debug.keystore"\nkeystore/debug_user="androiddebugkey"\nkeystore/debug_password="android"' export_presets.cfg
+          grep -q '^keystore/debug=' export_presets.cfg
 
       - name: Import project
         run: godot-bin/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit
