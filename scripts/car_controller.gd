@@ -40,6 +40,7 @@ var shift_cooldown: float = 0.0
 var engine_audio: AudioStreamPlayer3D
 var engine_playback: AudioStreamGeneratorPlayback
 var audio_phase: float = 0.0
+var tyre_smoke: CPUParticles3D
 
 func _ready() -> void:
 	mass = 1150.0
@@ -50,9 +51,38 @@ func _ready() -> void:
 	spawn_transform = global_transform
 	_build_vehicle_visuals()
 	_setup_engine_audio()
+	_setup_tyre_smoke()
 
 func _process(_delta: float) -> void:
 	_update_engine_audio()
+
+func _setup_tyre_smoke() -> void:
+	tyre_smoke = CPUParticles3D.new()
+	tyre_smoke.name = "TyreSmoke"
+	tyre_smoke.position = Vector3(0.0, -0.12, 1.45)
+	tyre_smoke.amount = 28
+	tyre_smoke.lifetime = 0.7
+	tyre_smoke.emitting = false
+	tyre_smoke.local_coords = false
+	var particle_material := ParticleProcessMaterial.new()
+	particle_material.direction = Vector3(0.0, 1.0, 0.0)
+	particle_material.spread = 32.0
+	particle_material.gravity = Vector3(0.0, 0.45, 0.0)
+	particle_material.initial_velocity_min = 0.35
+	particle_material.initial_velocity_max = 1.8
+	particle_material.scale_min = 0.08
+	particle_material.scale_max = 0.26
+	tyre_smoke.process_material = particle_material
+	var smoke_mesh := SphereMesh.new()
+	smoke_mesh.radius = 0.18
+	smoke_mesh.height = 0.36
+	var smoke_material := StandardMaterial3D.new()
+	smoke_material.albedo_color = Color(0.72, 0.74, 0.76, 0.32)
+	smoke_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	smoke_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	smoke_mesh.material = smoke_material
+	tyre_smoke.draw_pass_1 = smoke_mesh
+	add_child(tyre_smoke)
 
 func _setup_engine_audio() -> void:
 	var generator := AudioStreamGenerator.new()
@@ -161,6 +191,8 @@ func _physics_process(delta: float) -> void:
 	if speed_kmh > 8.0:
 		apply_central_force(-global_transform.basis.y * speed_kmh * downforce)
 	linear_damp = 0.18 if grounded_wheels == 0 else 0.08
+	if tyre_smoke != null:
+		tyre_smoke.emitting = handbrake_input > 0.25 and speed_kmh > 35.0 and grounded_wheels >= 2
 
 func _update_powertrain(delta: float, speed_kmh: float, forward_speed: float) -> void:
 	shift_cooldown = maxf(0.0, shift_cooldown - delta)
