@@ -34,6 +34,9 @@ var ai_waypoints: Array[Vector3] = []
 var ai_target_index: int = 0
 var spawn_transform: Transform3D
 var brake_light_material: StandardMaterial3D
+var current_gear: int = 1
+var engine_rpm: float = 900.0
+var shift_cooldown: float = 0.0
 
 func _ready() -> void:
 	mass = 1150.0
@@ -52,6 +55,7 @@ func _physics_process(delta: float) -> void:
 
 	var forward_speed := linear_velocity.dot(-global_transform.basis.z)
 	var speed_kmh := linear_velocity.length() * 3.6
+	_update_powertrain(delta, speed_kmh, forward_speed)
 	var drive := throttle_input
 	if drive > 0.0 and forward_speed * 3.6 >= max_speed_kmh:
 		drive = 0.0
@@ -114,6 +118,33 @@ func _physics_process(delta: float) -> void:
 	if speed_kmh > 8.0:
 		apply_central_force(-global_transform.basis.y * speed_kmh * downforce)
 	linear_damp = 0.18 if grounded_wheels == 0 else 0.08
+
+func _update_powertrain(delta: float, speed_kmh: float, forward_speed: float) -> void:
+	shift_cooldown = maxf(0.0, shift_cooldown - delta)
+	if forward_speed < -1.0:
+		current_gear = 1
+		engine_rpm = lerpf(engine_rpm, 1800.0 + absf(forward_speed) * 95.0, delta * 5.0)
+		return
+	var gear_limits: Array[float] = [0.0, 48.0, 88.0, 128.0, 166.0, 198.0]
+	if speed_kmh < 5.0:
+		current_gear = 1
+	elif shift_cooldown <= 0.0 and current_gear < 6 and speed_kmh > gear_limits[current_gear] + 4.0:
+		current_gear += 1
+		shift_cooldown = 0.42
+	elif shift_cooldown <= 0.0 and current_gear > 1 and speed_kmh < gear_limits[current_gear - 1] - 10.0:
+		current_gear -= 1
+		shift_cooldown = 0.35
+	var gear_ratio := [3.25, 2.18, 1.58, 1.22, 0.98, 0.82][current_gear - 1]
+	var target_rpm := clampf(900.0 + speed_kmh * gear_ratio * 48.0, 900.0, 7600.0)
+	if throttle_input > 0.1:
+		target_rpm = minf(7800.0, target_rpm + throttle_input * 650.0)
+	engine_rpm = lerpf(engine_rpm, target_rpm, clampf(delta * 7.0, 0.0, 1.0))
+
+func get_gear_text() -> String:
+	return "R" if throttle_input < -0.1 else str(current_gear)
+
+func get_rpm() -> float:
+	return engine_rpm
 
 func _read_player_controls() -> void:
 	throttle_input = Input.get_action_strength("accelerate") - Input.get_action_strength("reverse")
@@ -179,6 +210,9 @@ func reset_vehicle() -> void:
 	for i in range(previous_compression.size()):
 		previous_compression[i] = 0.0
 	ai_target_index = 0
+	current_gear = 1
+	engine_rpm = 900.0
+	shift_cooldown = 0.0
 	throttle_input = 0.0
 	steer_input = 0.0
 	brake_input = 0.0

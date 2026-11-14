@@ -10,6 +10,7 @@ func _ready() -> void:
 	_build_environment()
 	_build_track()
 	_add_track_markings()
+	_add_track_scenery()
 	_spawn_player_car()
 	_add_lighting()
 
@@ -183,6 +184,61 @@ func _spawn_ai_car(car_name: String, spawn_point: Vector3, paint_color: Color, r
 	rival.set_spawn_transform(rival.global_transform)
 	rival.set_ai_route(route, cruise_speed)
 	return rival
+
+func _add_track_scenery() -> void:
+	# Lightweight procedural scenery: low-poly trees and a compact spectator stand.
+	for z in range(-34, 35, 9):
+		_add_tree(Vector3(-43.0, 0.0, float(z)))
+		_add_tree(Vector3(43.0, 0.0, float(z)))
+	for x in range(-38, 39, 10):
+		_add_tree(Vector3(float(x), 0.0, -48.0))
+		_add_tree(Vector3(float(x), 0.0, 48.0))
+	_add_grandstand(Vector3(-43.0, 0.0, 22.0))
+
+func _add_tree(point: Vector3) -> void:
+	var trunk := MeshInstance3D.new()
+	var trunk_mesh := CylinderMesh.new()
+	trunk_mesh.top_radius = 0.18
+	trunk_mesh.bottom_radius = 0.28
+	trunk_mesh.height = 2.2
+	trunk.mesh = trunk_mesh
+	trunk.position = point + Vector3.UP * 1.1
+	var bark := StandardMaterial3D.new()
+	bark.albedo_color = Color(0.25, 0.13, 0.07)
+	trunk.material_override = bark
+	add_child(trunk)
+	var crown := MeshInstance3D.new()
+	var crown_mesh := SphereMesh.new()
+	crown_mesh.radius = 1.15
+	crown_mesh.height = 2.3
+	crown.mesh = crown_mesh
+	crown.position = point + Vector3.UP * 2.65
+	var leaves := StandardMaterial3D.new()
+	leaves.albedo_color = Color(0.08, 0.28, 0.11)
+	leaves.roughness = 1.0
+	crown.material_override = leaves
+	add_child(crown)
+
+func _add_grandstand(point: Vector3) -> void:
+	var stand_material := StandardMaterial3D.new()
+	stand_material.albedo_color = Color(0.18, 0.2, 0.24)
+	var seat_material := StandardMaterial3D.new()
+	seat_material.albedo_color = Color(0.78, 0.12, 0.06)
+	for row in range(5):
+		var bench := MeshInstance3D.new()
+		var bench_mesh := BoxMesh.new()
+		bench_mesh.size = Vector3(12.0, 0.42, 1.1)
+		bench.mesh = bench_mesh
+		bench.position = point + Vector3(0.0, 0.55 + float(row) * 0.62, float(row) * 0.9)
+		bench.material_override = seat_material if row % 2 == 0 else stand_material
+		add_child(bench)
+	var roof := MeshInstance3D.new()
+	var roof_mesh := BoxMesh.new()
+	roof_mesh.size = Vector3(13.0, 0.35, 6.0)
+	roof.mesh = roof_mesh
+	roof.position = point + Vector3(0.0, 4.0, 2.0)
+	roof.material_override = stand_material
+	add_child(roof)
 
 func _add_lighting() -> void:
 	var sun := DirectionalLight3D.new()
