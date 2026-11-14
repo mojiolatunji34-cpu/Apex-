@@ -38,6 +38,7 @@ var ai_waypoints: Array[Vector3] = []
 var ai_target_index: int = 0
 var spawn_transform: Transform3D
 var brake_light_material: StandardMaterial3D
+var reverse_light_material: StandardMaterial3D
 var current_gear: int = 1
 var engine_rpm: float = 900.0
 var shift_cooldown: float = 0.0
@@ -206,9 +207,13 @@ func _physics_process(delta: float) -> void:
 		wheel.rotate_object_local(Vector3.RIGHT, long_speed * delta / maxf(wheel_radius, 0.01))
 
 	if brake_light_material != null:
-		brake_light_material.emission_enabled = brake_input > 0.05 or throttle_input < -0.05
+		var braking := brake_input > 0.05 or handbrake_input > 0.15
+		brake_light_material.emission_enabled = true
 		brake_light_material.emission = Color(1.0, 0.025, 0.01)
-		brake_light_material.emission_energy_multiplier = 1.8 if brake_input > 0.05 else 0.65
+		brake_light_material.emission_energy_multiplier = 2.4 if braking else 0.55
+	if reverse_light_material != null:
+		reverse_light_material.emission_enabled = true
+		reverse_light_material.emission_energy_multiplier = 1.6 if throttle_input < -0.05 else 0.12
 	if speed_kmh > 8.0:
 		apply_central_force(-global_transform.basis.y * speed_kmh * downforce)
 	linear_damp = 0.18 if grounded_wheels == 0 else 0.08
@@ -463,6 +468,11 @@ func _build_vehicle_visuals() -> void:
 	brake_light_material.emission_enabled = true
 	brake_light_material.emission = Color(1.0, 0.025, 0.01)
 	brake_light_material.emission_energy_multiplier = 0.65
+	reverse_light_material = StandardMaterial3D.new()
+	reverse_light_material.albedo_color = Color(0.82, 0.9, 1.0)
+	reverse_light_material.emission_enabled = true
+	reverse_light_material.emission = Color(0.72, 0.86, 1.0)
+	reverse_light_material.emission_energy_multiplier = 0.12
 	for x in [-0.65, 0.65]:
 		var tail_lamp := MeshInstance3D.new()
 		var tail_mesh := BoxMesh.new()
@@ -472,6 +482,15 @@ func _build_vehicle_visuals() -> void:
 		tail_lamp.material_override = brake_light_material
 		add_child(tail_lamp)
 		body_animation_nodes.append(tail_lamp)
+
+		var reverse_lamp := MeshInstance3D.new()
+		var reverse_mesh := BoxMesh.new()
+		reverse_mesh.size = Vector3(0.12, 0.09, 0.065)
+		reverse_lamp.mesh = reverse_mesh
+		reverse_lamp.position = Vector3(x * 0.68, 0.48, 1.94)
+		reverse_lamp.material_override = reverse_light_material
+		add_child(reverse_lamp)
+		body_animation_nodes.append(reverse_lamp)
 
 	var spoiler := MeshInstance3D.new()
 	var spoiler_mesh := BoxMesh.new()
