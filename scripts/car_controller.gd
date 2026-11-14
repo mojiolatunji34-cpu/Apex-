@@ -64,15 +64,13 @@ func _setup_tyre_smoke() -> void:
 	tyre_smoke.lifetime = 0.7
 	tyre_smoke.emitting = false
 	tyre_smoke.local_coords = false
-	var particle_material := ParticleProcessMaterial.new()
-	particle_material.direction = Vector3(0.0, 1.0, 0.0)
-	particle_material.spread = 32.0
-	particle_material.gravity = Vector3(0.0, 0.45, 0.0)
-	particle_material.initial_velocity_min = 0.35
-	particle_material.initial_velocity_max = 1.8
-	particle_material.scale_min = 0.08
-	particle_material.scale_max = 0.26
-	tyre_smoke.process_material = particle_material
+	tyre_smoke.direction = Vector3(0.0, 1.0, 0.0)
+	tyre_smoke.spread = 32.0
+	tyre_smoke.gravity = Vector3(0.0, 0.45, 0.0)
+	tyre_smoke.initial_velocity_min = 0.35
+	tyre_smoke.initial_velocity_max = 1.8
+	tyre_smoke.scale_amount_min = 0.08
+	tyre_smoke.scale_amount_max = 0.26
 	var smoke_mesh := SphereMesh.new()
 	smoke_mesh.radius = 0.18
 	smoke_mesh.height = 0.36
@@ -81,7 +79,7 @@ func _setup_tyre_smoke() -> void:
 	smoke_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	smoke_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	smoke_mesh.material = smoke_material
-	tyre_smoke.draw_pass_1 = smoke_mesh
+	tyre_smoke.mesh = smoke_mesh
 	add_child(tyre_smoke)
 
 func _setup_engine_audio() -> void:
