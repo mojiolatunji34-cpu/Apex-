@@ -78,6 +78,17 @@ func _on_finish_body_entered(body: Node3D) -> void:
 		lap_start_time = race_time
 	race_updated.emit(current_lap, next_checkpoint, race_time, best_lap_time)
 
+func restart_race() -> void:
+	current_lap = 1
+	next_checkpoint = 0
+	race_time = 0.0
+	lap_start_time = 0.0
+	best_lap_time = 0.0
+	race_finished = false
+	if is_instance_valid(player):
+		player.reset_vehicle()
+	race_updated.emit(current_lap, next_checkpoint, race_time, best_lap_time)
+
 func get_lap_text() -> String:
 	if race_finished:
 		return "RACE COMPLETE"

@@ -7,6 +7,10 @@ var checkpoint_label: Label
 var best_label: Label
 var car_ref: ApexCar
 var race_ref: Node
+var pause_button: Button
+var result_panel: PanelContainer
+var result_label: Label
+var is_paused: bool = false
 
 func _ready() -> void:
 	var root := Control.new()
@@ -54,6 +58,35 @@ func _ready() -> void:
 	reset_button.pressed.connect(_reset_car)
 	pedals.add_child(reset_button)
 
+	pause_button = Button.new()
+	pause_button.text = "PAUSE"
+	pause_button.position = Vector2(-142, 18)
+	pause_button.anchor_left = 1.0
+	pause_button.anchor_right = 1.0
+	pause_button.custom_minimum_size = Vector2(118, 44)
+	pause_button.pressed.connect(_toggle_pause)
+	root.add_child(pause_button)
+
+	result_panel = PanelContainer.new()
+	result_panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	result_panel.position = Vector2(-190, -95)
+	result_panel.custom_minimum_size = Vector2(380, 190)
+	result_panel.visible = false
+	root.add_child(result_panel)
+	var result_content := VBoxContainer.new()
+	result_content.alignment = BoxContainer.ALIGNMENT_CENTER
+	result_panel.add_child(result_content)
+	result_label = Label.new()
+	result_label.text = "RACE COMPLETE"
+	result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	result_label.add_theme_font_size_override("font_size", 28)
+	result_content.add_child(result_label)
+	var result_restart := Button.new()
+	result_restart.text = "RACE AGAIN"
+	result_restart.custom_minimum_size = Vector2(180, 52)
+	result_restart.pressed.connect(_restart_race)
+	result_content.add_child(result_restart)
+
 func _process(_delta: float) -> void:
 	if is_instance_valid(car_ref):
 		speed_label.text = "%03d km/h" % roundi(car_ref.get_speed_kmh())
@@ -62,6 +95,9 @@ func _process(_delta: float) -> void:
 		time_label.text = race_ref.get_time_text()
 		checkpoint_label.text = race_ref.get_checkpoint_text()
 		best_label.text = race_ref.get_best_lap_text()
+		if race_ref.race_finished:
+			result_label.text = "RACE COMPLETE\nTIME  " + race_ref.get_time_text() + "\nBEST  " + race_ref.get_best_lap_text().replace("BEST ", "")
+			result_panel.visible = true
 
 func _make_label(parent: Control, point: Vector2, font_size: int, value: String) -> Label:
 	var label := Label.new()
@@ -89,10 +125,24 @@ func _press_action(action: String) -> void:
 func _release_action(action: String) -> void:
 	Input.action_release(action)
 
+func _toggle_pause() -> void:
+	is_paused = not is_paused
+	get_tree().paused = is_paused
+	pause_button.text = "RESUME" if is_paused else "PAUSE"
+
+func _restart_race() -> void:
+	get_tree().paused = false
+	is_paused = false
+	pause_button.text = "PAUSE"
+	result_panel.visible = false
+	if is_instance_valid(race_ref):
+		race_ref.restart_race()
+
 func _reset_car() -> void:
 	if is_instance_valid(car_ref):
 		car_ref.reset_vehicle()
 
 func _exit_tree() -> void:
+	get_tree().paused = false
 	for action in ["steer_left", "steer_right", "accelerate", "brake", "reverse", "handbrake"]:
 		Input.action_release(action)

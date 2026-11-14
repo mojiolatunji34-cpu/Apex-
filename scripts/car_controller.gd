@@ -125,18 +125,37 @@ func _update_ai_controls() -> void:
 		return
 
 	var target := ai_waypoints[ai_target_index]
-	if global_position.distance_to(target) < 9.0:
+	if global_position.distance_to(target) < 11.0:
 		ai_target_index = (ai_target_index + 1) % ai_waypoints.size()
 		target = ai_waypoints[ai_target_index]
 
-	var local_target := global_transform.basis.inverse() * (target - global_position)
+	# Aim slightly ahead of the waypoint to reduce sharp steering changes.
+	var next_index := (ai_target_index + 1) % ai_waypoints.size()
+	var lookahead_target := target.lerp(ai_waypoints[next_index], 0.22)
+	var local_target := global_transform.basis.inverse() * (lookahead_target - global_position)
 	var target_angle := atan2(local_target.x, maxf(-local_target.z, 0.1))
-	steer_input = clampf(target_angle / 0.62, -1.0, 1.0)
-	var corner_factor := clampf(1.0 - absf(target_angle) / 2.0, 0.38, 1.0)
-	var target_speed := ai_cruise_speed_kmh * corner_factor
+	var desired_steer := clampf(target_angle / 0.72, -1.0, 1.0)
+
+	# A forward sensor lets rivals react to another car instead of driving into it.
+	var forward := -global_transform.basis.z
+	var ray_start := global_position + Vector3.UP * 0.55
+	var query := PhysicsRayQueryParameters3D.create(ray_start, ray_start + forward * 8.0)
+	query.exclude = [get_rid()]
+	query.collision_mask = 1
+	var obstacle := get_world_3d().direct_space_state.intersect_ray(query)
+	var obstacle_slowdown := 1.0
+	if not obstacle.is_empty() and obstacle.collider is ApexCar:
+		var obstacle_local := global_transform.basis.inverse() * (obstacle.collider.global_position - global_position)
+		desired_steer += -0.48 if obstacle_local.x > 0.0 else 0.48
+		desired_steer = clampf(desired_steer, -1.0, 1.0)
+		obstacle_slowdown = 0.48
+
+	steer_input = move_toward(steer_input, desired_steer, 2.8 * get_physics_process_delta_time())
+	var corner_factor := clampf(1.0 - absf(target_angle) / 1.8, 0.42, 1.0)
+	var target_speed := ai_cruise_speed_kmh * corner_factor * obstacle_slowdown
 	var speed := get_speed_kmh()
-	throttle_input = clampf((target_speed - speed) / 28.0, 0.0, 1.0)
-	brake_input = clampf((speed - target_speed) / 22.0, 0.0, 1.0)
+	throttle_input = clampf((target_speed - speed) / 24.0, 0.0, 1.0)
+	brake_input = clampf((speed - target_speed) / 18.0, 0.0, 1.0)
 	handbrake_input = 0.0
 
 func set_ai_route(points: Array[Vector3], cruise_speed: float = 82.0) -> void:
