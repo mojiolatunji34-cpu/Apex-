@@ -27,7 +27,7 @@ An Android-first 3D racing simulator project built with Godot 4 and the GL Compa
 | Brake | BRAKE | Space |
 | Steer | Left / Right | A,D / arrows |
 | Handbrake | HANDBRAKE | Shift |
-| Reverse | Hold brake/reverse input | S / Down |
+| Reverse | Reverse input | S / Down |
 
 ## Important development status
 

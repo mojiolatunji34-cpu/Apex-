@@ -41,7 +41,6 @@ func _physics_process(_delta: float) -> void:
 	var forward_speed := linear_velocity.dot(forward)
 	var speed_kmh := linear_velocity.length() * 3.6
 
-	# A single pedal handles forward drive and controlled reverse.
 	if throttle_input > 0.0 and forward_speed * 3.6 < max_speed_kmh:
 		apply_central_force(forward * throttle_input * engine_force)
 	elif throttle_input < 0.0:
@@ -53,7 +52,6 @@ func _physics_process(_delta: float) -> void:
 	if brake_input > 0.0 and absf(forward_speed) > 0.15:
 		apply_central_force(-forward * signf(forward_speed) * brake_force * brake_input)
 
-	# Reduce side-slip without cancelling all movement; handbrake loosens rear grip.
 	var sideways_speed := linear_velocity.dot(right)
 	var speed_grip := lerpf(1.0, high_speed_grip, clampf(speed_kmh / 220.0, 0.0, 1.0))
 	var grip := lateral_grip * speed_grip
@@ -61,7 +59,6 @@ func _physics_process(_delta: float) -> void:
 		grip = lerpf(grip, lateral_grip * handbrake_grip, handbrake_input)
 	apply_central_force(-right * sideways_speed * grip * mass)
 
-	# Steering authority builds with speed and reverses naturally when backing up.
 	var steering_factor := clampf(absf(forward_speed) / 4.0, 0.0, 1.0)
 	var direction_factor := -1.0 if forward_speed < -0.5 else 1.0
 	apply_torque(Vector3.UP * steer_input * steering_torque * steering_factor * direction_factor)
