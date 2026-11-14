@@ -29,6 +29,10 @@ func _run_smoke_test() -> void:
 		push_error("Smoke test failed: chase camera is not current")
 		quit(1)
 		return
+	if player.get_node_or_null("EngineAudio") == null:
+		push_error("Smoke test failed: spatial engine audio player was not created")
+		quit(1)
+		return
 	if player.get_gear_text() != "1" or player.get_rpm() <= 0.0:
 		push_error("Smoke test failed: powertrain telemetry did not initialize")
 		quit(1)
