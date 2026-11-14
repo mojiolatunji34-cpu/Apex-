@@ -50,11 +50,10 @@ jobs:
         run: godot-bin/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit
 
       - name: Export debug APK
-        env:
-          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: ${{ runner.temp }}/../.android/debug.keystore
-          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
-          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$HOME/.android/debug.keystore"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android
           mkdir -p build
           godot-bin/Godot_v4.3-stable_linux.x86_64 --headless --verbose --path . --export-debug "Android" build/ApexRacing-debug.apk
           test -s build/ApexRacing-debug.apk
