@@ -30,6 +30,7 @@ var smoothed_steer: float = 0.0
 var brake_input: float = 0.0
 var handbrake_input: float = 0.0
 var wheel_visuals: Array[MeshInstance3D] = []
+var wheel_steering_pivots: Array[Node3D] = []
 var suspension_rays: Array[RayCast3D] = []
 var wheel_is_front: Array[bool] = []
 var previous_compression: Array[float] = [0.0, 0.0, 0.0, 0.0]
@@ -194,8 +195,8 @@ func _physics_process(delta: float) -> void:
 		longitudinal_force = clampf(longitudinal_force, -max_tyre_force, max_tyre_force)
 		apply_force(wheel_forward * longitudinal_force, hit_point - global_position)
 
-		wheel.position = to_local(hit_point + hit_normal * wheel_radius)
-		wheel.rotation.y = steer_angle
+		wheel_steering_pivots[i].position = to_local(hit_point + hit_normal * wheel_radius)
+		wheel_steering_pivots[i].rotation.y = steer_angle
 		wheel.visible = true
 		wheel.rotate_object_local(Vector3.RIGHT, long_speed * delta / maxf(wheel_radius, 0.01))
 
@@ -407,6 +408,12 @@ func _build_vehicle_visuals() -> void:
 			suspension_rays.append(ray)
 			wheel_is_front.append(z < 0.0)
 
+			var wheel_pivot := Node3D.new()
+			wheel_pivot.name = "FrontWheelPivot" if z < 0.0 else "RearWheelPivot"
+			wheel_pivot.position = Vector3(x, -0.1, z)
+			add_child(wheel_pivot)
+			wheel_steering_pivots.append(wheel_pivot)
+
 			var wheel := MeshInstance3D.new()
 			var wheel_mesh := CylinderMesh.new()
 			wheel_mesh.top_radius = wheel_radius
@@ -414,9 +421,8 @@ func _build_vehicle_visuals() -> void:
 			wheel_mesh.height = 0.24
 			wheel.mesh = wheel_mesh
 			wheel.rotation.z = PI / 2.0
-			wheel.position = Vector3(x, -0.1, z)
 			wheel.material_override = wheel_material
-			add_child(wheel)
+			wheel_pivot.add_child(wheel)
 			wheel_visuals.append(wheel)
 
 	# Visible headlamps and emissive rear brake lamps help communicate vehicle orientation.

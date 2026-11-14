@@ -37,6 +37,10 @@ func _run_smoke_test() -> void:
 		push_error("Smoke test failed: animated body visual nodes were not registered")
 		quit(1)
 		return
+	if player.wheel_steering_pivots.size() != 4 or player.wheel_visuals.size() != 4:
+		push_error("Smoke test failed: four wheel steering pivots and wheel meshes were not created")
+		quit(1)
+		return
 	if player.get_node_or_null("EngineAudio") == null:
 		push_error("Smoke test failed: spatial engine audio player was not created")
 		quit(1)
