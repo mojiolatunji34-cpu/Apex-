@@ -29,7 +29,7 @@ jobs:
 
       - name: Install Android SDK packages
         run: |
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;23.2.8568313"
 
       - name: Download Godot 4.3 and Android export templates
         run: |
@@ -40,6 +40,17 @@ jobs:
           mkdir -p "$HOME/.local/share/godot/export_templates/4.3.stable"
           unzip -q export-templates.tpz -d export-templates
           cp -a export-templates/templates/. "$HOME/.local/share/godot/export_templates/4.3.stable/"
+
+      - name: Configure Godot Android SDK paths
+        run: |
+          mkdir -p "$HOME/.config/godot"
+          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/java_sdk_path = "$JAVA_HOME"
+          EOF
 
       - name: Import project
         run: godot-bin/Godot_v4.3-stable_linux.x86_64 --headless --editor --path . --quit
